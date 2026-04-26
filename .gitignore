@@ -1,0 +1,56 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Office temp/lock files
+~$*
+.~lock.*
+
+# Local agent work directories
+_phase0_chain/
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Large data files (redownloadable from public sources)
+data/reference/*.fa
+data/reference/*.fa.gz
+data/reference/*.fai
+data/annotation/*.gtf
+data/annotation/*.gtf.gz
+data/annotation/*.db
+data/variants/clinvar*.vcf*
+*.bgz
+*.tbi
+
+# Large analysis caches (regeneratable from scripts)
+results/runs/*.npz
+*.cache
+
+# Model weights (downloaded via huggingface_hub)
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+Thumbs.db
+desktop.ini
