@@ -610,8 +610,38 @@ Updates will be appended to this document upon completion.
 
 **Wall time**: 14.8 min on H200 (~1.13 variants/sec, evo2_7b_base 8K context).
 
-### 11.2 Phase 1 Full Landscape (32-layer tuned lens) — IN PROGRESS
-*(awaiting completion)*
+### 11.2 Phase 1 Full Landscape (32-layer tuned lens) — DONE ✓
+
+**Procedure**: 100 sanity sequences × 32 blocks + norm forward, train per-layer A_l (4096×4096 affine + zero bias, eye init), 15 epochs Adam lr=1e-3 MSE loss, seed=42. Reused `src/tuned_lens.py:train_tuned_lens()`. 15.4 min wall on H200.
+
+**Results — 30/32 layers recover to >0.90 (L=30, L=31 degenerate as expected from architectural quirk)**:
+
+| Metric | Layer | Value |
+|---|---|---:|
+| Peak initial divergence (max init MSE) | **L=2 (hcl)** | 1,259 |
+| Top-5 init divergence | L=2 (1259), L=3 (969), L=9 (927), L=28 (822), L=4 (819) | EARLY layers dominate |
+| Worst recovery (lowest recovery_pct) | **L=12 (hcm)** | 0.9816 |
+| Bottom-5 recovery | L=12, L=15, L=11, L=17, L=25 — middle layers | |
+| **Canonical "deep-thinking" tap** | **L=29 (hcm)** | recovery 0.9996, init 765, final 0.307 |
+| L=30, L=31 degenerate | (architectural) | initial=0 from start |
+| Block-type pattern (mean init / mean recovery) | hcl: 498.5 / 0.9956 (best) | <0.4pp range |
+
+**Paper-relevant findings**:
+
+(i) **Counter-intuitive divergence pattern**: largest initial logit-lens divergence at **EARLY layers (L=2-4, 9)**, not late layers as Phase 0 HyenaDNA suggested. Evo 2's representation transformation is most "raw" near the input embedding — the lens needs the most learning to extract final logits from there.
+
+(ii) **Mid-zone (L=11-17) is hardest to linearly recover** — even after 15 epochs, residual loss is largest in this band (L=12 final=2.33, recovery 98.16%). This may indicate **non-linear processing concentrated in mid-network** that a single 4096×4096 affine cannot fully capture. This is a candidate region for further mechanistic investigation (e.g., MLP head tuned lens vs affine).
+
+(iii) **Block-type effect minimal** (<0.4 percentage points across attn/hcs/hcm/hcl): Evo 2's striped Hyena 2 architecture shows **uniform linear decodability across block types**, contrary to Phase 0 hypothesis H_attn vs H_hyena.
+
+(iv) **Canonical Phase 2/3 tap = L=29** (deepest non-degenerate): replaces earlier Phase 0 lock of "last 1-2 blocks" which is degenerate for Evo 2.
+
+(v) **Linear decodability is universal**: 30/32 layers recover to ≥98% via single affine — strong evidence that gDTR / UR-gDTR using running-min D arrays captures genuine convergence behavior, since linear projections at every depth can approximately reconstruct final logits (within ε).
+
+**Files** (committed):
+- `results/phase1.followup_full/`: `recovery_curve.json` (per-layer init/final/curve), `verdict.json` (key stats), `F_recovery_landscape.{pdf,png}`, `F_recovery_pct.{pdf,png}`, `_done`
+- `phase1/scripts/12c_phase1_followup_full.py` (~250 lines)
+- 30 A_l.pt checkpoints (gitignored, ~64MB each)
 
 ### 11.3 Phase 2 Multi-chromosome (chr17 + cross-chr + gene-class) — IN PROGRESS
 *(2.0 prep CPU running; 2.1 GPU forward will start after current GPU agents finish)*
