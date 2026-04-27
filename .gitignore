@@ -69,3 +69,6 @@ results/phase3_main/_checkpoint.json
 results/phase5/chr22_quadrants.npy
 results/phase3_ensemble/variants_features_full.csv
 data/conservation/
+results/phase4/chr22_cache_hyenadna.h5
+results/phase4/chr22_cache_nt.h5
+results/phase4/chr22_cache_dnabert.h5

@@ -1,0 +1,9 @@
+{
+  "phase": "phase4",
+  "models": [
+    "evo2",
+    "hyenadna",
+    "nt_v2",
+    "dnabert2"
+  ]
+}
