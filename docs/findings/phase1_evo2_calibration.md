@@ -1,10 +1,19 @@
-# Phase 1 Findings — gDTR on Evo 2 7B
+# Phase 1 — Evo 2 7B method calibration
 
-**Project**: Genomic Deep-Thinking Ratio (gDTR) — Causal Genomic Foundation Model의 Layer-wise Prediction Convergence 분석
-**Phase**: 1 (Method calibration on Evo 2 7B), DigitalOcean H200 141 GB
-**Document version**: 2026-04-27 v1.0
-**Status**: Phase 1 fully complete; this document synthesizes all 7 sub-stages of analysis
-**Predecessors**: `phase0_design.md`, `PHASE0_FINDINGS.md`, `PHASE1_DECISIONS.md`, `PHASE1_APPENDIX_C.md`
+**Project**: Genomic Deep-Thinking Ratio (gDTR) — layer-wise prediction
+convergence on causal genomic foundation models.
+**Phase**: 1 (method calibration on Evo 2 7B), DigitalOcean H200 141 GB.
+**Status**: 8/8 sub-stages PASS verify; this document synthesizes the Phase 1
+calibration result + the post-Phase-1 32-layer tuned-lens follow-up.
+**Predecessors**: [`../phase0_design.md`](../phase0_design.md),
+[`../PHASE0_FINDINGS.md`](../PHASE0_FINDINGS.md),
+[`../decisions/phase1_decisions.md`](../decisions/phase1_decisions.md),
+[`../decisions/phase1_appendix_c.md`](../decisions/phase1_appendix_c.md).
+**Successor docs (split from legacy `PHASE1_FINDINGS.md`)**:
+- chr17 multi-chromosome replication → [`phase2_chr17_replication.md`](phase2_chr17_replication.md)
+- ClinVar variant pathogenicity → [`phase3_variant_pathogenicity.md`](phase3_variant_pathogenicity.md)
+- 4-model architecture invariance → [`phase4_cross_architecture.md`](phase4_cross_architecture.md)
+- Q2 conservation discordance → [`phase5_conservation_discordance.md`](phase5_conservation_discordance.md)
 
 ---
 
@@ -64,49 +73,49 @@ Run 2(00:35, 2026-04-27): 직접 진단 — `data_ptr()` 비교로 두 텐서 �
 
 각 sub-stage의 최종 verdict:
 
-### 2.1 Phase 1.0 — Smoke Test (PHASE1_APPENDIX_C.md)
-✅ **PASS**. Evo 2 forward path 검증, layer_names schema 매핑(`blocks.{0..31}`, `norm`), block-type 분류(attn=[3,10,17,24,31] / hcs / hcm / hcl), VRAM profile (6kb 16.6 / 16kb 22.5 / 32kb 31.9 GB), `lm_head(post-final-norm) = out.logits` exact match. 28.7 초 wall.
+### 2.1 Phase 1.0 — Smoke Test (decisions/phase1_appendix_c.md)
+PASS. Evo 2 forward path 검증, layer_names schema 매핑(`blocks.{0..31}`, `norm`), block-type 분류(attn=[3,10,17,24,31] / hcs / hcm / hcl), VRAM profile (6kb 16.6 / 16kb 22.5 / 32kb 31.9 GB), `lm_head(post-final-norm) = out.logits` exact match. 28.7 초 wall.
 
 ### 2.2 Phase 1.1 — Block-stratified Gate A_evo (untuned)
-✅ verify PASS, ❌ verdict overall FAIL.
+verify PASS, verdict overall FAIL.
 - Per-block-type M2_jsd: attn=0.31, hcs=0.33, hcm=0.18, hcl=0.29 → **모두 0.85 임계값 미달** (Phase 0 패턴 재현, raw monotonicity 본질적으로 낮음).
 - M2_global = 0.0 (UR과 JSD 모두) — 어떤 position에서도 raw D 곡선이 단조 비증가하지 않음.
 - 하지만 verify 1.1 모든 invariant 통과: D_cos[30]=0.31 (정상, NOT zero), D_cos[0]=0.96 (early high), D_cos finite, D_jsd[31] near 0(self-ref), D_jsd[29]=0.11 (last informative).
 - **결정 트리에 의해**: tuned lens 학습으로 진행(`tuned_recovery_required_for: ['hcs', 'hcm', 'hcl', 'attn']`).
 
 ### 2.3 Phase 1.2 — Tuned Lens Training (last 2 blocks)
-✅ verify PASS (degenerate=OK).
+verify PASS (degenerate=OK).
 - A_30, A_31 학습 (15 epochs, Adam lr=1e-3, MSE).
 - **MSE = 0.0000e+00 from epoch 1 to 15** for both layers. 27.5 초.
 - 원인: h_30 = h_31 = norm input이므로 lm_head(norm(h_30)) = lm_head(norm(h_31)) = out.logits exactly. A_l = identity 시점에 이미 perfect → loss = 0, gradient = 0, 학습 불가능.
 - A_30.pt, A_31.pt 모두 identity matrix + zero bias로 saved (training_curve.json).
 
 ### 2.4 Phase 1.3 — Gate A_evo with Tuned Lens
-✅ verify PASS, verdict overall FAIL.
+verify PASS, verdict overall FAIL.
 - per-block tuned M2_jsd: attn=0.24, hcs=0.33, hcm=0.18, hcl=0.29 — untuned와 거의 동일.
 - tuned[30] = 1.000 = untuned[30] = 1.000 (둘 다 trivially monotone — D_jsd[30]=0 항상이라 running-min도 0, 단조 항상 만족).
 - **`tuned_recovered = False`** — 기대했던 회복 효과 없음. 이는 **architectural fact의 직접 결과**(L31 idle), bug 아님.
 
 ### 2.5 Phase 1.4 — Calibration (region-adaptive q70)
-✅ verify PASS.
+verify PASS.
 - γ_cos_per_region: sanity_gc = 0.396, sanity_shuf = 0.397
 - γ_cos_global_q70 = 0.3966 (full chr22 sanity 100 seq의 penultimate layer D_cos 분포의 70th percentile)
 - 검증: 두 region 간 차이 0.001로 매우 안정적, 분포 균질.
 
 ### 2.6 Phase 1.5 — HP Sweep (post-hoc, no new forward)
-✅ verify PASS.
+verify PASS.
 - Grid: γ_cos ∈ {0.4, 0.5, 0.6} × ρ ∈ {0.8, 0.85, 0.9}
 - best HP: **γ_cos = 0.40, ρ = 0.80** — Phase 0 lock과 동일.
 - best **Cohen's d = 5.281** (gc_match vs dinuc_shuf의 gDTR 분포 차이) — Phase 0 TP53 d=-1.02 대비 5배 이상 강한 signal. 모델이 sequence dinucleotide 구조에 매우 sensitive.
 
 ### 2.7 Phase 1.6_chr22 — chr22 Forward
-✅ verify PASS.
+verify PASS.
 - 12,978 windows × 6 kb sliding (3 kb stride), 77,868,000 positions
 - 70 min wall (rate 3.0-3.2 windows/sec on H200)
 - chr22_cache.h5 saved (~23 GB raw, h5 compressed)
 
 ### 2.8 Phase 1.6_gate_b — Genomic Signal at Scale
-✅ verify PASS, ❌ overall PASS criterion 미달 (Cohen's d threshold).
+verify PASS, overall PASS criterion 미달 (Cohen's d threshold).
 
 | Context | n positions | mean_c | median_c |
 |---|---:|---:|---:|
@@ -126,8 +135,8 @@ primary test (exon vs intron):
 
 **Decision**: per PHASE1_DECISIONS.md decision tree branch "PASS but 다른 direction" → cancer-gene bias 가능성. Gene class별 stratified 분석 필요(follow-up sub-experiment).
 
-### 2.9 Phase 1.7 — PHASE1_DECISION.md write-up
-✅ verify PASS (auto-generated, no missing JSONs, mentions Gate A_evo + Gate B_evo).
+### 2.9 Phase 1.7 — PHASE1_DECISION write-up
+verify PASS (auto-generated, no missing JSONs, mentions Gate A_evo + Gate B_evo).
 
 ---
 
@@ -185,7 +194,7 @@ h_30.std()                = 2.16 × 10¹⁰            # hidden state 자체 mag
 
 (i) **Phase 0 design's "last 1-2 blocks tuned lens" rule does not transfer to Evo 2**. PHASE1_DECISIONS.md §2.2의 학습 target은 architectural assumption에 기반한 것이며, Evo 2 hybrid에서는 invalidated. Phase 1.2/1.3은 degenerate한 확인용으로만 가치를 가진다.
 
-(ii) **Tuned lens가 의미있는 layer는 더 earlier**. follow-up sub-experiment(Phase 1.followup, 본 문서 §9.1 참조)에서 L ∈ {15, 20, 25, 28}에 적용해 어디서 lens divergence가 가장 크고 회복이 가장 큰지 식별한다.
+(ii) **Tuned lens가 의미있는 layer는 더 earlier**. follow-up sub-experiment(Phase 1.followup, §11 Post-Phase-1 Updates 참조)에서 L ∈ {15, 20, 25, 28}에 적용해 어디서 lens divergence가 가장 크고 회복이 가장 큰지 식별한다.
 
 (iii) **manuscript-level paper finding**. 본 발견은 "genomic CLM의 마지막 block 거동은 architecture에 따라 spike↔idle의 양극단을 가질 수 있다"는 일반화로 격상 가능. NLP transformer(GPT 시리즈)에서 마지막 block은 보통 활발한 readout 회전을 하므로, Evo 2의 idle은 **biological foundation model specific**한 거동일 가능성. Phase 4 cross-arch가 결정적 검증.
 
@@ -197,11 +206,13 @@ Phase 1.1의 per-block-type M2: attn=0.31, hcs=0.33, hcm=0.18, hcl=0.29 — **�
 
 ---
 
-## 4. Finding 2 — Splice Site as Deep-Thinking Hotspot
+## 4. Finding 2 — Splice Site as Deep-Thinking Hotspot (chr22)
 
 ### 4.1 Statement
 
 chr22 genome-wide profiling(12,978 windows × 6 kb, 77.9 M positions)에서 **splice donor와 acceptor 영역이 모든 다른 genomic context 대비 settling depth가 현저히 낮다**(즉 모델이 가장 깊게 layer를 통합해서 prediction에 도달한다). splice donor mean_c = 25.57, acceptor mean_c = 25.69 vs 다음으로 낮은 3'UTR mean_c = 27.72 — 약 2 layer 차이는 통계적으로 매우 robust하다(N > 180,000 each).
+
+(chr17 multi-chromosome replication은 [`phase2_chr17_replication.md`](phase2_chr17_replication.md) 참조; cross-architecture replication은 [`phase4_cross_architecture.md`](phase4_cross_architecture.md) 참조.)
 
 ### 4.2 Evidence
 
@@ -314,14 +325,14 @@ Phase 0는 6 kb window, sliding 500 bp(~38 windows for TP53). Phase 1는 6 kb wi
 
 | Phase 0 Decision | Phase 1 Outcome | Transfer Status |
 |---|---|---|
-| Primary lens = UR-gDTR (cosine) | UR-gDTR가 Gate A_evo verify 통과, JSD lens는 D_jsd[30]=0 architectural quirk. UR이 더 robust. | ✅ Confirmed |
-| Auxiliary lens = JSD-gDTR + quantile-γ | 사용 가능하나 D_jsd[30],[31]=0 architectural quirk 보고. quantile-γ calibration 작동(γ=0.397). | ✅ Confirmed (with caveat) |
-| γ_cos default = 0.50 | Phase 1 best 0.40 (±0.10 shift, 같은 plateau 안) | ✅ Approximately |
-| ρ = 0.85 | Phase 1 best 0.80 (±0.05) | ✅ Approximately |
-| Calibration = regional q70 | sanity_gc=0.396, sanity_shuf=0.397, region간 ±0.001(very stable) | ✅ Confirmed |
+| Primary lens = UR-gDTR (cosine) | UR-gDTR가 Gate A_evo verify 통과, JSD lens는 D_jsd[30]=0 architectural quirk. UR이 더 robust. | Confirmed |
+| Auxiliary lens = JSD-gDTR + quantile-γ | 사용 가능하나 D_jsd[30],[31]=0 architectural quirk 보고. quantile-γ calibration 작동(γ=0.397). | Confirmed (with caveat) |
+| γ_cos default = 0.50 | Phase 1 best 0.40 (±0.10 shift, 같은 plateau 안) | Approximately |
+| ρ = 0.85 | Phase 1 best 0.80 (±0.05) | Approximately |
+| Calibration = regional q70 | sanity_gc=0.396, sanity_shuf=0.397, region간 ±0.001(very stable) | Confirmed |
 | Variant feature primary = ΔD(ℓ) vector | Phase 3 carry-over (not yet tested in Phase 1) | Pending Phase 3 |
 | Variant scalar = Δc_interp | Phase 3 carry-over | Pending Phase 3 |
-| Tuned lens target = last 1-2 blocks | **NOT TRANSFERABLE** for Evo 2 (degenerate due to L31 idle). 후속 implementation에서는 earlier layers(L=15-25) 사용 권장. | ❌ Architectural mismatch |
+| Tuned lens target = last 1-2 blocks | **NOT TRANSFERABLE** for Evo 2 (degenerate due to L31 idle). 후속 implementation에서는 earlier layers(L=15-25) 사용 권장. | Architectural mismatch |
 | Block-stratified Gate A | per-block-type M2 stratification 작동, 하지만 attn block들도 (Phase 0 H_attn 가설 예측과 달리) Hyena block 비슷한 낮은 monotonicity 보임 | Partial confirm |
 
 ### 6.3 Phase 1 Risk Decomposition Update
@@ -473,6 +484,48 @@ Phase 1이 답하지 못한 / 새로 제기된 질문들:
 
 ---
 
+## 11. Post-Phase-1 follow-up — Full 32-layer tuned-lens landscape
+
+(Originally section 11.2 of legacy `PHASE1_FINDINGS.md`. Other sub-sections of
+that "Post-Phase-1 Updates" block are now redistributed: §11.1 + §11.4 + §11.6
+→ [`phase3_variant_pathogenicity.md`](phase3_variant_pathogenicity.md);
+§11.3 + chr17 references → [`phase2_chr17_replication.md`](phase2_chr17_replication.md);
+§11.5 → [`phase5_conservation_discordance.md`](phase5_conservation_discordance.md);
+§11.7 → [`phase4_cross_architecture.md`](phase4_cross_architecture.md).)
+
+**Procedure**: 100 sanity sequences × 32 blocks + norm forward, train per-layer A_l (4096×4096 affine + zero bias, eye init), 15 epochs Adam lr=1e-3 MSE loss, seed=42. Reused `src/tuned_lens.py:train_tuned_lens()`. 15.4 min wall on H200.
+
+**Results — 30/32 layers recover to >0.90 (L=30, L=31 degenerate as expected from architectural quirk)**:
+
+| Metric | Layer | Value |
+|---|---|---:|
+| Peak initial divergence (max init MSE) | **L=2 (hcl)** | 1,259 |
+| Top-5 init divergence | L=2 (1259), L=3 (969), L=9 (927), L=28 (822), L=4 (819) | EARLY layers dominate |
+| Worst recovery (lowest recovery_pct) | **L=12 (hcm)** | 0.9816 |
+| Bottom-5 recovery | L=12, L=15, L=11, L=17, L=25 — middle layers | |
+| **Canonical "deep-thinking" tap** | **L=29 (hcm)** | recovery 0.9996, init 765, final 0.307 |
+| L=30, L=31 degenerate | (architectural) | initial=0 from start |
+| Block-type pattern (mean init / mean recovery) | hcl: 498.5 / 0.9956 (best) | <0.4pp range |
+
+**Paper-relevant findings**:
+
+(i) **Counter-intuitive divergence pattern**: largest initial logit-lens divergence at **EARLY layers (L=2-4, 9)**, not late layers as Phase 0 HyenaDNA suggested. Evo 2's representation transformation is most "raw" near the input embedding — the lens needs the most learning to extract final logits from there.
+
+(ii) **Mid-zone (L=11-17) is hardest to linearly recover** — even after 15 epochs, residual loss is largest in this band (L=12 final=2.33, recovery 98.16%). This may indicate **non-linear processing concentrated in mid-network** that a single 4096×4096 affine cannot fully capture. This is a candidate region for further mechanistic investigation (e.g., MLP head tuned lens vs affine).
+
+(iii) **Block-type effect minimal** (<0.4 percentage points across attn/hcs/hcm/hcl): Evo 2's striped Hyena 2 architecture shows **uniform linear decodability across block types**, contrary to Phase 0 hypothesis H_attn vs H_hyena.
+
+(iv) **Canonical Phase 2/3 tap = L=29** (deepest non-degenerate): replaces earlier Phase 0 lock of "last 1-2 blocks" which is degenerate for Evo 2.
+
+(v) **Linear decodability is universal**: 30/32 layers recover to ≥98% via single affine — strong evidence that gDTR / UR-gDTR using running-min D arrays captures genuine convergence behavior, since linear projections at every depth can approximately reconstruct final logits (within ε).
+
+**Files** (committed):
+- `results/phase1.followup_full/`: `recovery_curve.json` (per-layer init/final/curve), `verdict.json` (key stats), `F_recovery_landscape.{pdf,png}`, `F_recovery_pct.{pdf,png}`, `_done`
+- `phase1/scripts/12c_phase1_followup_full.py` (~250 lines)
+- 30 A_l.pt checkpoints (gitignored, ~64MB each)
+
+---
+
 ## Appendix A — Phase 1 Statistical Details
 
 ### A.1 Gate A_evo (untuned, 100 sanity sequences × 6000 positions)
@@ -508,7 +561,7 @@ variation 0.001 → calibration is region-stable for sanity proxy.
 
 | (γ_cos, ρ) | Cohen's d (gc_match vs dinuc_shuf gDTR) |
 |---|---:|
-| (0.40, 0.80) | **5.282** ⭐ best |
+| (0.40, 0.80) | **5.282** best |
 | (0.40, 0.85) | (within plateau) |
 | (0.50, 0.85) | (within plateau) |
 
@@ -527,7 +580,7 @@ Per-context full table see Section 2.8. All counts and means are exact from `gat
 
 ---
 
-## Appendix B — Reproducibility
+## Appendix B — Reproducibility (Phase 1)
 
 **Seeds**: All randomization uses `seed=42`. Per-script sub-seed offsets locked in source code.
 
@@ -568,306 +621,9 @@ Per-context full table see Section 2.8. All counts and means are exact from `gat
 
 **End of Phase 1 Findings Document**
 
-Word count: approximately 5,800 (in Korean; English technical terms not separately counted).
+Document version: 2026-04-28 (split from legacy `PHASE1_FINDINGS.md` — sections
+covering Phase 2/3/4/5 moved to per-phase docs in `docs/findings/`).
 
-Document author: Direct synthesis from Phase 1 gate JSONs (run 2 successful pipeline) + smoke test findings + diagnostic test outputs (/tmp/t4.py).
+Document author: Direct synthesis from Phase 1 gate JSONs (run 2 successful pipeline) + smoke test findings + diagnostic test outputs.
 
-Date locked: 2026-04-27.
-
-Update history: v1.0 initial — synthesis after 7-sub-stage pipeline completion at 02:05 UTC.
-
-Pending sub-experiments (in progress as of write time):
-- Local sync agent (39 base64 chunks → /Users/yoonjincho/Project/ICML/results/phase1_sync/)
-- Follow-up tuned lens at L={15,20,25,28} agent
-- Gate B sub-analysis (per-gene rank + splice fine + Cohen's d matrix) agent
-
-Updates will be appended to this document upon completion.
-
----
-
-## 11. Post-Phase-1 Updates (2026-04-27)
-
-### 11.1 Phase 3 ClinVar Pilot — STRONG GO ⭐
-
-**Scope**: TP53 + BRCA1 (chr17), 1000 variants (250 × 2 genes × 2 categories), balanced cap. 10-fold StratifiedKFold CV, sklearn LogisticRegression.
-
-**Results**:
-
-| Feature | AUROC | 95% CI | Verdict |
-|---|---:|---|---|
-| **ΔD_cos vector (32-d, UR primary)** | **0.831** | [0.799, 0.862] | ⭐ best |
-| ΔD_jsd vector (32-d) | 0.790 | [0.755, 0.825] | ✅ above 0.65 |
-| max\|ΔD_jsd\| (scalar) | 0.804 | [0.776, 0.831] | ✅ |
-| Δc_interp (scalar @ γ=0.397) | 0.360 → flipped 0.640 | [0.331, 0.389] | weak (single-threshold loses info) |
-
-**Verdict**: All vector-based features clear 0.65 PASS threshold by wide margin. **UR-gDTR (cosine) slightly outperforms JSD-gDTR** — strengthens Phase 0 lock of UR as primary lens.
-
-**Implications**:
-1. Phase 3 main analysis should proceed (scale to all 15 genes × full P/LP+B/LB SNV set)
-2. ΔD_cos vector should be elevated to **co-primary** alongside ΔD_jsd in main analysis
-3. Pathogenicity signal is encoded in **per-layer divergence pattern**, not collapsed scalar
-4. Δc_interp single-threshold loses information — use vector representation throughout
-
-**Wall time**: 14.8 min on H200 (~1.13 variants/sec, evo2_7b_base 8K context).
-
-### 11.2 Phase 1 Full Landscape (32-layer tuned lens) — DONE ✓
-
-**Procedure**: 100 sanity sequences × 32 blocks + norm forward, train per-layer A_l (4096×4096 affine + zero bias, eye init), 15 epochs Adam lr=1e-3 MSE loss, seed=42. Reused `src/tuned_lens.py:train_tuned_lens()`. 15.4 min wall on H200.
-
-**Results — 30/32 layers recover to >0.90 (L=30, L=31 degenerate as expected from architectural quirk)**:
-
-| Metric | Layer | Value |
-|---|---|---:|
-| Peak initial divergence (max init MSE) | **L=2 (hcl)** | 1,259 |
-| Top-5 init divergence | L=2 (1259), L=3 (969), L=9 (927), L=28 (822), L=4 (819) | EARLY layers dominate |
-| Worst recovery (lowest recovery_pct) | **L=12 (hcm)** | 0.9816 |
-| Bottom-5 recovery | L=12, L=15, L=11, L=17, L=25 — middle layers | |
-| **Canonical "deep-thinking" tap** | **L=29 (hcm)** | recovery 0.9996, init 765, final 0.307 |
-| L=30, L=31 degenerate | (architectural) | initial=0 from start |
-| Block-type pattern (mean init / mean recovery) | hcl: 498.5 / 0.9956 (best) | <0.4pp range |
-
-**Paper-relevant findings**:
-
-(i) **Counter-intuitive divergence pattern**: largest initial logit-lens divergence at **EARLY layers (L=2-4, 9)**, not late layers as Phase 0 HyenaDNA suggested. Evo 2's representation transformation is most "raw" near the input embedding — the lens needs the most learning to extract final logits from there.
-
-(ii) **Mid-zone (L=11-17) is hardest to linearly recover** — even after 15 epochs, residual loss is largest in this band (L=12 final=2.33, recovery 98.16%). This may indicate **non-linear processing concentrated in mid-network** that a single 4096×4096 affine cannot fully capture. This is a candidate region for further mechanistic investigation (e.g., MLP head tuned lens vs affine).
-
-(iii) **Block-type effect minimal** (<0.4 percentage points across attn/hcs/hcm/hcl): Evo 2's striped Hyena 2 architecture shows **uniform linear decodability across block types**, contrary to Phase 0 hypothesis H_attn vs H_hyena.
-
-(iv) **Canonical Phase 2/3 tap = L=29** (deepest non-degenerate): replaces earlier Phase 0 lock of "last 1-2 blocks" which is degenerate for Evo 2.
-
-(v) **Linear decodability is universal**: 30/32 layers recover to ≥98% via single affine — strong evidence that gDTR / UR-gDTR using running-min D arrays captures genuine convergence behavior, since linear projections at every depth can approximately reconstruct final logits (within ε).
-
-**Files** (committed):
-- `results/phase1.followup_full/`: `recovery_curve.json` (per-layer init/final/curve), `verdict.json` (key stats), `F_recovery_landscape.{pdf,png}`, `F_recovery_pct.{pdf,png}`, `_done`
-- `phase1/scripts/12c_phase1_followup_full.py` (~250 lines)
-- 30 A_l.pt checkpoints (gitignored, ~64MB each)
-
-### 11.3 Phase 2 Multi-chromosome (chr17 + cross-chr + gene-class) — IN PROGRESS
-*(2.0 prep CPU running; 2.1 GPU forward will start after current GPU agents finish)*
-
-### 11.4 Phase 3 Main — 15 Cancer Genes, 10K variants — STRONG ⭐⭐⭐
-
-**Scope**: 8,008 train (P/LP + B/LB) + 2,902 VUS for ranking. 15 cancer genes (BRCA1, BRCA2, TP53, EGFR, KRAS, BRAF, PIK3CA, APC, MLH1, MSH2, PTEN, RB1, VHL, ATM, PALB2) across 9 chromosomes. Stratified per (gene × category), capped at 350 per cell.
-
-**Compute**: ~5 hr H200 evo2_7b_base, 0 errors, 0 NaN.
-
-**Results — Stratified 10-fold CV**:
-
-| Feature | AUROC | 95% CI |
-|---|---:|---|
-| ΔD_cos vector (32-d, UR primary) | **0.844** | [0.831, 0.857] |
-| ΔD_jsd vector (32-d) | 0.823 | [0.813, 0.832] |
-| Evo 2 Δ log-likelihood | 0.751 | [0.738, 0.764] |
-| **Ensemble (ΔD_cos + Evo 2 LL)** | **0.861** | [0.851, 0.871] ⭐ |
-| max\|ΔD_jsd\| (scalar) | 0.787 | [0.775, 0.798] |
-
-**Results — Leave-One-Gene-Out CV** (cross-gene generalization):
-
-| Feature | AUROC | 95% CI |
-|---|---:|---|
-| ΔD_cos vector | 0.843 | [0.811, 0.876] |
-| ΔD_jsd vector | 0.821 | [0.790, 0.853] |
-| Evo 2 Δ LL | 0.793 | [0.740, 0.846] |
-| **Ensemble** | **0.866** | [0.832, 0.899] |
-
-**KEY FINDINGS**:
-
-1. **INCREMENTAL INFORMATION CONFIRMED** ⭐: Ensemble (ΔD_cos + Evo 2 LL) > ΔD_cos alone:
-   - Stratified: 0.861 vs 0.844 → **ΔAUROC = +0.017**
-   - LOGO: 0.866 vs 0.843 → **ΔAUROC = +0.023**
-   - Both clear PHASE0_DESIGN § 5.3 threshold "ensemble ΔAUROC ≥ 0.02 incremental information"
-   - Manuscript central claim VALIDATED: gDTR ΔD vector adds information on top of Evo 2's own likelihood — different axis (computational depth disruption vs sequence likelihood)
-
-2. **Pilot → Main robust scaling**: ΔD_cos 0.831 (TP53+BRCA1, 1K variants) → 0.844 (15 genes, 10K). Slight increase with gene diversity, no degradation. Confirms pilot result was NOT TP53+BRCA1-specific.
-
-3. **UR-gDTR (cosine) > JSD-gDTR consistently**:
-   - Pilot: 0.831 vs 0.790 (+0.041)
-   - Main stratified: 0.844 vs 0.823 (+0.021)
-   - Main LOGO: 0.843 vs 0.821 (+0.022)
-   - Phase 0 lock of UR as primary lens VALIDATED at variant level
-
-4. **Cross-gene generalization** (LOGO ≈ stratified):
-   - ΔD_cos: 0.843 vs 0.844 — only -0.001 difference!
-   - Model trained on subset of genes generalizes to held-out genes
-   - This is highly non-trivial: pathogenicity signal in ΔD pattern is gene-agnostic
-   - Has implications for clinical use: trained on common cancer drivers, predicts on rare variants
-
-5. **Manuscript figure direct outputs**:
-   - `F_phase3_main_auroc.{pdf,png}` — ROC curve overlay (5 features)
-   - `F_per_gene_auroc.{pdf,png}` — bar chart per gene
-   - `F_vus_ranking.{pdf,png}` — top-100 VUS predicted pathogenic
-   - `per_gene_auroc.csv`, `vus_ranking.csv` — supplementary data
-
-**Implications for ICML manuscript narrative**:
-
-```
-gDTR captures a NEW axis of variant pathogenicity (computational depth disruption)
-that is COMPLEMENTARY to existing predictors (likelihood-based).
-
-Validated at:
-- Pilot scale (TP53+BRCA1, 1K variants): AUROC 0.83
-- Main scale (15 cancer genes, 10K variants, per-gene-stratified CV): AUROC 0.84
-- Leave-one-gene-out CV: AUROC 0.84 (no gene-specific overfit)
-- Ensemble with Evo 2 likelihood: AUROC 0.87 (+0.02 incremental info)
-```
-
-This validates the central paper claim. Future work: (a) full ensemble with CADD + AlphaMissense, (b) clinical validation set, (c) functional VUS follow-up via experimental assays.
-
-### 11.5 Phase 5 — gDTR-Conservation Q2 Discovery ⭐
-
-**Scope**: chr22 50.8 Mb, per-position settling depth (Phase 1.6_sub) × PhyloP 100-way conservation. Q2 = high gDTR (top 25% c) × low conservation (bottom 25% PhyloP). Methodology: 100bp box-car smoothing both signals (raw c is integer-quantized into 32 levels, raw runs maxed at 34 bp).
-
-**Coverage**: 71.2% of chr22 valid (NaN: c 23.2%, PhyloP 28.7%, smoothed).
-
-**Quadrant sizes (% chr22)**:
-| Quadrant | Size (%) | Interpretation |
-|---|---:|---|
-| Q1 (high gDTR + high cons) | 14.09% | Conserved deep computation (known functional) |
-| **Q2 (high gDTR + low cons)** | **3.71% (1.9 Mb)** | ⭐ Recently evolved deep computation candidates |
-| Q3 (low gDTR + high cons) | 39.30% | Conserved but predictable (e.g., simple repeats) |
-| Q4 (low gDTR + low cons) | 14.09% | Background noise |
-
-**Q2 contiguous regions ≥ 100 bp**: 5,090 (paper-quality figure).
-
-**Q2 enrichment** (hypergeometric one-sided, all p ≈ 0):
-| Annotation | Fold | Source |
-|---|---:|---|
-| **rmsk_Low_complexity** | **2.02×** | RepeatMasker |
-| rmsk_Simple_repeat | 1.52× | RepeatMasker |
-| rmsk_LTR | 1.39× | RepeatMasker (transposable elements!) |
-| rmsk_LINE | 1.31× | RepeatMasker |
-| **5'UTR (genomic context)** | **1.95×** | GENCODE v44 |
-| ENCODE cCRE | 1.28× | ENCODE SCREEN v3 |
-| ENCODE rDHS | 1.25× | ENCODE rDHS catalog |
-
-**Largest Q2 region**: chr22:22,893,870–22,895,351 (1,481 bp intron, mean c = 31.31, mean PhyloP = -0.63).
-
-**KEY FINDING — paper-grade**:
-Q2 is significantly enriched for **transposable-element-derived regulatory sequences** (low_complexity 2×, simple_repeat 1.5×, LTR 1.4×) **AND** ENCODE regulatory elements (cCRE/rDHS 1.25-1.28×) **AND** 5'UTRs (~2×). This is consistent with the literature observation that **lineage-specific TE-derived enhancers/promoters are major sources of recently evolved regulatory function** (Chuong et al. 2017, Nat Rev Genet). gDTR captures their "deep computation" signature even when traditional conservation does not.
-
-**Manuscript narrative**: Q2 = "model-derived map of deep-thinking regions in lineage-specific regulatory DNA" — provides a new annotation layer that complements PhyloP/GERP for prioritizing functional but non-conserved regulatory elements.
-
-### 11.6 Phase 3 Ensemble (CADD + AlphaMissense + DeLong) — Refined Manuscript Narrative
-
-**Scope**: Phase 3 main 10,910 variants enriched with CADD PHRED + AlphaMissense scores. CADD via tabix HTTP byte-range (no full 87 GB download). AM full hg38 (643 MB), filtered to 10 chromosomes. Coverage: CADD 100%, AM 26% P/LP, 6.4% B/LB, 84.7% VUS.
-
-**Stratified 10-fold CV AUROC (mean ± 95% CI)**:
-| Feature (dim) | AUROC | 95% CI |
-|---|---:|---|
-| **CADD PHRED (1-d) — saturating** | **0.9953** | [0.994, 0.996] |
-| ΔD_cos vector (32-d) | 0.8437 | [0.831, 0.857] |
-| Evo 2 Δ log-likelihood (1-d) | 0.7513 | [0.738, 0.764] |
-| AlphaMissense score (1-d) | 0.5675 | [0.561, 0.574] |
-| ΔD_cos + Evo 2 LL (33-d) | **0.8607** | [0.851, 0.871] |
-| ΔD_cos + CADD (33-d) | 0.9953 | [0.994, 0.997] |
-| ΔD_cos + AM (33-d) | 0.8468 | [0.834, 0.860] |
-| **Full ensemble A+B+C+D (35-d)** | **0.9962** | [0.995, 0.997] |
-| **Baseline B+C+D (3-d, no gDTR)** | **0.9963** | [0.995, 0.998] |
-| C+D (CADD+AM, 2-d) | 0.9962 | [0.995, 0.997] |
-
-**DeLong tests (paired AUROC, stratified pooled scores)**:
-
-| Comparison | ΔAUROC | p-value | Interpretation |
-|---|---:|---:|---|
-| A+B+C+D vs B+C+D (does ΔD add to full?) | -0.0001 | 0.516 (NS) | ⚠️ ΔD does NOT add over full ensemble |
-| A vs Evo 2 LL | +0.092 | < 1e-50 | ⭐ ΔD wins decisively |
-| A vs CADD | -0.151 | < 1e-100 | CADD dominates (label leakage) |
-| A vs AM | +0.279 | < 1e-100 | ⭐ ΔD wins decisively |
-| **A+B vs A** (ΔD + Evo 2 vs ΔD alone) | **+0.017** | **3.6e-15** | ⭐⭐⭐ HIGHLY SIGNIFICANT incremental info |
-| ABCD vs A | +0.152 | ≈ 0 | Adding C+B+D dramatically improves over ΔD alone |
-
-**Critical observation — CADD circularity**:
-CADD AUROC = 0.9953 saturates the ensemble. This is a **known artifact** in clinical-genetics literature: CADD was trained on ClinVar-derived labels, so on ClinVar P/LP vs B/LB benchmarks CADD shows label-leakage (AUROC 0.95+). **No subsequent feature** (Evo 2 LL, AM, ΔD_cos) can add measurable information once CADD is included. This is acknowledged in: Sundaram et al. 2018 Nat Genet (PrimateAI vs CADD), Cheng et al. 2023 Science (AlphaMissense limitations), and Pejaver et al. 2020 Nat Commun. Recommended practical use of CADD: as a baseline only on independent test sets.
-
-**REFINED MANUSCRIPT NARRATIVE**:
-
-Original claim (failed): "ΔD adds info on top of CADD+AM+Evo2 ensemble" → DeLong p=0.52 NS.
-
-**New refined claim (strongly supported)**:
-1. **"Among orthogonal LM/structure-based variant predictors (Evo 2 LL, AlphaMissense), ΔD_cos is the strongest single feature"** (vs Evo 2 LL p<1e-50, vs AM p<1e-100)
-2. **"ΔD + Evo 2 likelihood show statistically significant complementarity"** (DeLong p=3.6e-15) — both are model-based but capture different aspects: ΔD = computational depth disruption, Evo 2 LL = sequence likelihood
-3. **"On non-CADD-trained settings (novel variants outside CADD's training set, non-coding regions where CADD is weaker), ΔD_cos provides orthogonal information not captured by likelihood-based or structure-based predictors"**
-4. **CADD circularity acknowledged** as a literature-known limitation — separate concern from gDTR's contribution
-
-This refined framing is **honest, reviewer-proof, and aligned with current variant pathogenicity literature**.
-
-### 11.7 Phase 4 — Cross-Architecture Validation (4 models on chr22) ⭐⭐
-
-**Scope**: chr22 12,978 windows × 4 genomic foundation models. UR-gDTR cosine_lens (model-agnostic, primary). Per-model q70 calibration. 17 min total wall on H200.
-
-**Models compared**:
-
-| Model | Architecture | Layers | Hidden | Tokens / 6kb window | Wall | γ_q70 |
-|---|---|---:|---:|---|---|---:|
-| Evo 2 7B (existing) | Hybrid Transformer + StripedHyena 2 | 32 | 4096 | 6,000 (1bp) | reused | 0.396 |
-| HyenaDNA-large-1m | Pure Hyena | 8 | 256 | 6,001 (1bp + BOS) | ~4 min | 0.358 |
-| NT-v2 500M | Transformer MLM (k-mer) | 29 | 1024 | 671 (k=6, 4kb) | ~7.5 min | 0.533 |
-| DNABERT-2 117M | Transformer MLM (BPE) | 12 | 768 | ~600 (BPE, 3kb) | ~3 min | 0.677 |
-
-**Engineering challenges**:
-- NT-v2 forced to fp32 (vendor bf16 attention path broken)
-- DNABERT-2 required disabling bundled triton flash-attn kernel (compilation incompatibility); patched to use PyTorch fallback
-- Both still ran successfully
-
-**Pairwise Spearman ρ on per-window mean settling depth** (all p < 1e-42):
-
-|  | evo2 | hyena | nt_v2 | dnabert2 |
-|---|---:|---:|---:|---:|
-| **evo2** | 1.00 | **+0.516** | -0.119 | -0.188 |
-| **hyenadna** | +0.516 | 1.00 | -0.287 | -0.166 |
-| **nt_v2** | -0.119 | -0.287 | 1.00 | **+0.663** |
-| **dnabert2** | -0.188 | -0.166 | +0.663 | 1.00 |
-
-**Two-tier architecture invariance** ⭐:
-
-- **Within-family STRONG correlation**:
-  - Causal-LM per-bp models (Evo 2 + HyenaDNA): ρ = +0.516
-  - Bidirectional MLM token-based models (NT-v2 + DNABERT-2): ρ = +0.663
-- **Cross-family NEGATIVE correlation**:
-  - Causal-LM ↔ MLM: ρ ∈ [-0.119, -0.287]
-- **All p < 1e-42** (highly significant)
-
-**4-way top-decile concordance: ZERO windows intersect** — supports the two-tier story (each architecture family lights up DIFFERENT chr22 windows).
-
-**Per-model splice signal** (donor/acceptor vs intron baseline):
-
-| Model | donor mean_c | acceptor mean_c | intron mean_c | direction donor < intron? |
-|---|---:|---:|---:|---|
-| Evo 2 (per-bp) | 25.59 | 25.71 | 27.84 | ✓ |
-| HyenaDNA (per-bp, L=8) | 6.55 | 6.62 | 6.89 | ✓ |
-| NT-v2 (per-window) | 27.85 | n/a | n/a | k-mer alignment limitation |
-| DNABERT-2 (per-window) | 11.27 | n/a | n/a | BPE alignment limitation |
-
-**Splice deep-thinking signal REPLICATES universally in both per-bp models** (Evo 2 + HyenaDNA-large), at vastly different model scales (7B vs 28M, 32 vs 8 layers). This is strong evidence that the splice-deep-thinking phenomenon is **architecture-invariant within the per-bp causal-LM family**.
-
-For k-mer/BPE MLMs (NT-v2, DNABERT-2), the per-position splice grid doesn't align to bp tokens, so per-position splice signal is inaccessible without re-aligning tokens to bp coordinates. This is a **methodological limitation rather than evidence against architecture-invariance**.
-
-**REFINED MANUSCRIPT NARRATIVE for Phase 4**:
-
-> "Architecture invariance is **two-tier**: within architecture families (per-bp causal-LM models or token-based MLM models) gDTR rankings are strongly correlated (ρ ≥ 0.5). Cross-family correlations diverge or even invert, suggesting that the level at which 'deep computation' occurs depends on the model's tokenization/objective. The splice-site deep-thinking signal — the manuscript's headline phenomenon — replicates universally in both Evo 2 (7B, 32-layer hybrid) and HyenaDNA-large (28M, 8-layer pure Hyena), confirming the signal is not Evo-2-specific. K-mer/BPE MLMs offer different but consistent within-family rankings."
-
-This is **stronger than a simple "universal" claim** because it identifies the mechanism (within-family architecture invariance + tokenization-level dependence) and its limitations.
-
-**Files**: `results/phase4/`:
-- chr22_cache_hyenadna.h5, _nt.h5, _dnabert.h5 (gitignored, 1.4 GB total)
-- per_model_summary.json (γ, layer counts, splice signal per model)
-- concordance_matrix.json (Spearman ρ + p-values + top-decile intersection)
-- F12_cross_arch_heatmap.{pdf,png}, F13_per_model_splice.{pdf,png}
-- _done
-
-**Phase 4 in conjunction with Phase 5**: Q2 (high gDTR + low conservation) was discovered in Evo 2. With Phase 4 within-family results, we now know the same Q2-style ranking would replicate in HyenaDNA-large. This generalizes the Q2 framework beyond a single model.
-
----
-
-## 12. Final Phase 1+2+3+4+5+ext Summary
-
-5 paper-grade findings established across 8 sub-stages:
-
-1. **Architectural variability**: Evo 2 L31 idle vs HyenaDNA L7 spike — opposite ends of last-block computation pattern (Phase 1.1-1.3 + 1.followup_full)
-2. **Splice deep-thinking universality**: chr22 + chr17 + cross-arch (Evo 2, HyenaDNA-large) all show donor/acceptor < intron baseline (Phase 1.6 + 2.5 + 4)
-3. **Variant pathogenicity orthogonal axis**: ΔD_cos AUROC 0.84, statistically significant incremental info over Evo 2 LL (DeLong p=3.6e-15) (Phase 3 main + ensemble)
-4. **Q2 conservation discordance**: 5,090 chr22 regions with high gDTR but low PhyloP, enriched 2× for low-complexity / TE-derived regulatory sequences + ENCODE cCREs (Phase 5)
-5. **Two-tier architecture invariance**: within causal-LM family (ρ=0.52) and within MLM family (ρ=0.66) gDTR rankings are robust; cross-family rankings diverge (Phase 4)
-
-H200 compute used: ~15-20 hr total. Project status: ICML manuscript-ready.
+Date locked: 2026-04-27 (original); 2026-04-28 (re-organized).
