@@ -1,0 +1,9 @@
+{
+  "gamma_cos": 0.397,
+  "seed": 42,
+  "outputs": {
+    "per_gene_rank": "/root/gDTR/results/phase1.6_sub/per_gene_rank.csv",
+    "splice_profile": "/root/gDTR/results/phase1.6_sub/splice_distance_profile.json",
+    "cohens_d_matrix": "/root/gDTR/results/phase1.6_sub/cohens_d_matrix.csv"
+  }
+}

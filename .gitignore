@@ -54,3 +54,11 @@ results/runs/*.npz
 # OS
 Thumbs.db
 desktop.ini
+
+# Phase 1 large caches (regeneratable)
+results/phase1.1/lens_traces.npz
+results/phase1.1/hidden_taps.npz
+results/phase1.6/chr22_cache.h5
+results/phase1.6_sub/chr22_position_c.npy
+*.h5
+results/phase1.followup/A_*.pt

@@ -1,0 +1,20 @@
+# Phase 1 data versions (locked at download time)
+# Generated: 2026-04-26T14:35:29Z
+
+
+[GRCh38 reference]
+chr17.fa.gz: 023ccefd298db339159a446e88d742ac
+chr22.fa.gz: 41b47ce1cc21b558409c19b892e1c0d1
+source: UCSC hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/
+
+[GENCODE v44]
+gencode.v44.annotation.gtf.gz: ee330cfe6d0654ba9b9cf434d5c1bfb1 (full)
+gencode.v44.chr17_chr22.gtf.gz: 408bcdd558547c96d681bbf295868d3f (filtered)
+gencode.v44.chr17_chr22.gtf.db: e87fcaca80b0e54b0c12bd504ba3a647 (gffutils sqlite)
+source: ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_44/
+
+[ClinVar]
+clinvar.vcf.gz: 9cfdd0716ae60bf0c9b0cc498534286e
+clinvar.vcf.gz.tbi: bc519f0f6c1b76e13fb1e49b64f748b9
+##fileDate: 2026-04-18
+source: ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/
