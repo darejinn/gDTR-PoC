@@ -62,3 +62,5 @@ results/phase1.6/chr22_cache.h5
 results/phase1.6_sub/chr22_position_c.npy
 *.h5
 results/phase1.followup/A_*.pt
+results/phase2.1/chr17_cache.h5
+results/phase2.4/chr17_position_c.npy
