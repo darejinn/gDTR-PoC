@@ -90,3 +90,68 @@ For questions or collaboration: yoonjincho25@yonsei.ac.kr
 ---
 
 *Phase 0 finalized 2026-04-26. Phase 1 (Evo 2 7B) entry pending.*
+---
+
+## Phase 1 (Evo 2 7B): COMPLETE (2026-04-27)
+
+**8/8 sub-stages PASS verify** in ~90 min wall clock on DigitalOcean H200 141 GB. Full automated invariant checks via `phase1/scripts/verify_phase.py` (8 verifier functions). Pipeline orchestrated in two parallel tmux windows.
+
+### Three paper-grade findings (Phase 1)
+
+1. **Architectural — Evo 2 L31 idle (vs HyenaDNA L7 spike)**: The last attention block (`blocks.31`) of Evo 2 7B is effectively a no-op residual passthrough. Direct verification: `max|h_30 - h_31| = 0.000000` exactly across 100 sanity sequences × 6000 positions. This is the exact OPPOSITE of Phase 0 HyenaDNA's L7→L8 alignment SPIKE. Implication: Phase 0's "tuned lens at last 1-2 blocks" rule does NOT transfer to Evo 2; the meaningful tuned-lens depth shifts to **L=28** (deepest non-degenerate layer; follow-up showed initial MSE 822 → final 0.34, 99.96% drop). Architecture-specific deep-thinking patterns confirmed.
+
+2. **Splice site as universal deep-thinking signature**: chr22 genome-wide profiling (12,978 windows × 6 kb, 77.9 M positions) shows splice donor (mean settling depth 25.57) and acceptor (25.69) substantially LOWER than all other contexts (intergenic 28.75, intron 27.82, coding_exon 28.26, 5'UTR 28.99, 3'UTR 27.72). Sub-analysis: splice signal extends BEYOND ±200 bp without returning to background, with asymmetric profile (deeper on exonic side for donors, intronic side for acceptors). Strongest pairwise Cohen's d = +0.540 (intergenic vs splice_donor). Mechanism candidates: branch point + polypyrimidine tract + splice site recognition requires long-range integration.
+
+3. **Calibration transfers, biology direction context-dependent**: HP sweep best (γ_cos, ρ) = (0.40, 0.80), Cohen's d = 5.28 — Phase 0 lock (0.50, 0.85) carries cleanly with ±0.10/±0.05 plateau. However, Gate B chr22 exon-vs-intron Cohen's d = -0.068 (small) with **direction reversal** vs Phase 0 TP53/BRCA1 (d = -1.02 large, intron > exon). Now: intron < exon. Hypothesis: cancer-gene bias in Phase 0 + genome-wide chr22 effect dilution. Sub-analysis identified per-gene rank: top-3 deepest = CCDC188 (22.99), APOBEC3A (23.71), RGL4 (23.72).
+
+### Phase 1 architecture (key facts in `PHASE1_APPENDIX_C.md`)
+
+- Loaded variant: `evo2_7b_base` (8K/32K context; FP8 1M variant blocked by TE 2.14 + torch 2.4 incompat)
+- 32 blocks: attn=[3,10,17,24,31], hcs=[0,4,7,11,14,18,21,25,28], hcm=[1,5,8,12,15,19,22,26,29], hcl=[2,6,9,13,16,20,23,27,30]
+- Tied head: storage + value tied (clone before perturbation)
+- VRAM: 6kb=16.6 GB, 16kb=22.5 GB, 32kb=31.9 GB
+
+### Phase 1 layout (this repo)
+
+```
+.
+├── PHASE1_FINDINGS.md          Comprehensive synthesis (~5,800 words, Phase 0 style)
+├── PHASE1_DECISIONS.md         Pre-registered locked plan (in docs/)
+├── PHASE1_APPENDIX_C.md        Architectural facts (smoke test output)
+├── PHASE1_EXECUTION_PLAN.md    Server-specific execution doc
+├── PHASE1_DECISION.md          Auto-generated gate verdicts
+├── phase1/
+│   ├── src/                    7 Phase 1 modules: constants_evo2, model_loader_evo2,
+│   │                           logit_lens_evo2, ur_gdtr_evo2, tuned_lens, calibration, block_type
+│   ├── scripts/                15 scripts: smoke (00), Gate A (10), tuned (12), tuned recheck (13),
+│   │                           calibration (14), HP sweep (15), chr22 forward (16), Gate B (16b),
+│   │                           Gate B sub-analyses (16c), write-up (17), follow-up tuned at L=15-28 (12b),
+│   │                           plus prep scripts, verify_phase, master shells
+│   ├── tests/                  Phase 1 env + import sanity
+│   ├── DATA_VERSIONS.txt       Locked: GRCh38, GENCODE v44, ClinVar 2026-04-18
+│   ├── MODEL_REVISIONS.txt     Locked: HF revisions for Evo 2 + cross-arch models
+│   └── requirements_phase1.lock.txt   88 pinned pip packages
+├── results/
+│   ├── phase1.{1..6}/          Per-phase JSONs + figures (committed)
+│   ├── phase1.followup/        L=15/20/25/28 tuned lens checkpoints + curves
+│   ├── phase1.6_sub/           Per-gene rank, splice fine profile, Cohen's d matrix
+│   └── status/                 Per-phase verify status JSONs
+```
+
+### Phase 0 → Phase 1 transfer status
+
+| Phase 0 Decision | Phase 1 Outcome |
+|---|---|
+| Primary lens = UR-gDTR (cosine) | ✅ Confirmed (Gate A_evo verify PASS) |
+| Auxiliary lens = JSD-gDTR + quantile-γ | ✅ Confirmed (caveat: D_jsd[30]/D_jsd[31] ≡ 0 architectural quirk) |
+| γ_cos = 0.50, ρ = 0.85 | ✅ Approximately (best 0.40/0.80, ±0.10 plateau) |
+| Tuned lens target = last 1-2 blocks | ❌ Architectural mismatch (L31 idle); use L=28 |
+| Block-stratified Gate A | Partial confirm (per-block-type M2 distinguishable, but all ≪ 0.85) |
+
+### Reproducibility
+
+- seed=42 everywhere
+- HF revision SHA + weights MD5 locked in `PHASE1_APPENDIX_C.md` § C.1
+- requirements_phase1.lock.txt (88 packages)
+- All compute logged to per-phase status JSONs
+

@@ -1,0 +1,205 @@
+"""Strict per-phase invariant checks. Exits non-zero on FAIL."""
+from __future__ import annotations
+import sys, json
+from pathlib import Path
+import numpy as np
+ROOT = Path('/root/gDTR')
+
+def verify_1_1():
+    p = ROOT / 'results' / 'phase1.1'
+    d = np.load(p / 'lens_traces.npz', allow_pickle=True)
+    Dc, Dj = d['D_cos'], d['D_jsd']
+    c = []
+    c.append(('D_cos[30] = D_cos[31] arch quirk', abs(float(Dc[:,30,:].mean()) - float(Dc[:,31,:].mean())) < 0.01))
+    c.append(('D_cos[30] > 0.05 (not zeroed)', float(Dc[:,30,:].mean()) > 0.05))
+    c.append(('D_cos[0] > 0.3', float(Dc[:,0,:].mean()) > 0.3))
+    c.append(('min D_cos < 0.7 mid', float(Dc[:,1:31,:].mean(axis=(0,2)).min()) < 0.7))
+    c.append(('D_cos finite', bool(np.isfinite(Dc).all())))
+    c.append(('D_jsd[31] near zero (final ref)', float(Dj[:,31,:].mean()) < 1e-4))
+    c.append(('D_jsd[29] > 1e-4 (last informative)', float(Dj[:,29,:].mean()) > 1e-4))
+    c.append(('D_jsd finite', bool(np.isfinite(Dj).all())))
+    h = np.load(p / 'hidden_taps.npz')
+    c.append(('hidden_30 finite', bool(np.isfinite(h['hidden_30'][0,:100,:]).all())))
+    return c
+
+def verify_1_2():
+    p = ROOT / 'results' / 'phase1.2'
+    c = []
+    c.append(('A_30.pt exists', (p/'A_30.pt').exists()))
+    c.append(('A_31.pt exists', (p/'A_31.pt').exists()))
+    f = p / 'training_curve.json'
+    if f.exists():
+        j = json.load(open(f))
+        for L in ('30','31'):
+            if L in j:
+                lc = j[L]['loss_curve']
+                c.append((f'A_{L} final<5', float(lc[-1])<5.0))
+                c.append((f'A_{L} loss tolerated (final<=initial+1e-6, degenerate=OK)', float(lc[-1]) <= float(lc[0]) + 1e-6))
+    return c
+
+def verify_1_3():
+    p = ROOT / 'results' / 'phase1.3'
+    j = json.load(open(p/'gate_a_tuned.json'))
+    c = []
+    c.append(('M2_jsd_tuned in JSON', 'M2_jsd_tuned' in j))
+    if 'M2_jsd_tuned' in j and 'M2_jsd_untuned' in j:
+        t = float(j['M2_jsd_tuned'].get('30', 0))
+        u = float(j['M2_jsd_untuned'].get('30', 1))
+        c.append((f'tuned[30]={t:.3f} >= untuned[30]={u:.3f}', t >= u))
+    return c
+
+def verify_1_4():
+    p = ROOT / 'results' / 'phase1.4' / 'calibration.json'
+    j = json.load(open(p))
+    g = j['gamma_cos_per_region']
+    c = []
+    c.append(('gamma_cos sanity_gc in (0.05,0.95)', 0.05 < float(g.get('sanity_gc', 0)) < 0.95))
+    c.append(('gamma_cos sanity_shuf in (0.05,0.95)', 0.05 < float(g.get('sanity_shuf', 0)) < 0.95))
+    return c
+
+def verify_1_5():
+    p = ROOT / 'results' / 'phase1.5' / 'best_hp.json'
+    j = json.load(open(p))
+    cd = j.get('best', j).get('cohens_d', float('nan'))
+    return [("Cohen's d finite (NOT NaN)", bool(np.isfinite(cd)))]
+
+def verify_1_6_chr22():
+    import h5py
+    p = ROOT / 'results' / 'phase1.6' / 'chr22_cache.h5'
+    if not p.exists():
+        return [('chr22_cache.h5 exists', False)]
+    with h5py.File(p, 'r') as f:
+        n = f['D_cos'].shape[0]
+        done = int(f['done_mask'][:].sum())
+        d30 = float(f['D_cos'][0,30,:].astype(np.float32).mean())
+    return [
+        ('chr22 has 12978 windows', n == 12978),
+        ('chr22 all windows done', done == n),
+        ('chr22 win0 D_cos[30]>0.05 (Bug-1 fixed)', d30 > 0.05),
+    ]
+
+def verify_1_6_gate_b():
+    p = ROOT / 'results' / 'phase1.6' / 'gate_b.json'
+    if not p.exists():
+        return [('gate_b.json exists', False)]
+    j = json.load(open(p))
+    cd = j.get('cohens_d_exon_vs_intron')
+    if cd is None:
+        cd = j.get('verdict_gate_b', {}).get('cohens_d', float('nan'))
+    return [
+        ('per-context counts present', 'context_counts' in j or 'counts' in j),
+        ("Cohen's d finite", bool(np.isfinite(cd) if cd is not None else False)),
+    ]
+
+def verify_1_7():
+    p = ROOT / 'PHASE1_DECISION.md'
+    text = p.read_text()
+    return [
+        ('mentions Gate A_evo', 'Gate A_evo' in text),
+        ('mentions Gate B_evo', 'Gate B_evo' in text),
+        ('no missing JSON warning', 'could not load' not in text.lower()),
+    ]
+
+def verify_followup():
+    p = ROOT / 'results' / 'phase1.followup'
+    c = []
+    target_layers = [15, 20, 25, 28]
+    for L in target_layers:
+        c.append((f'A_{L}.pt exists', (p/f'A_{L}.pt').exists()))
+    f = p / 'training_curve.json'
+    c.append(('training_curve.json exists', f.exists()))
+    if f.exists():
+        j = json.load(open(f))
+        for L in target_layers:
+            key = str(L)
+            if key not in j:
+                c.append((f'A_{L} entry in training_curve.json', False))
+                continue
+            init = float(j[key]['initial_loss_identity'])
+            fin = float(j[key]['final_loss'])
+            c.append((f'A_{L} initial>1e-4 (NOT degenerate)', init > 1e-4))
+            c.append((f'A_{L} final<initial*0.5 (>=50% drop)', fin < init * 0.5))
+    g = p / 'gate_a_followup.json'
+    c.append(('gate_a_followup.json exists', g.exists()))
+    if g.exists():
+        v = json.load(open(g))
+        recoveries = v.get('fractional_recovery', {})
+        if recoveries:
+            best = max(recoveries.items(), key=lambda kv: float(kv[1]))
+            print(f'  >>> best-recovering layer: L={best[0]} fractional_drop={float(best[1]):.3f}')
+            print(f'  >>> verdict: {v.get("interpretation","(missing)")}')
+    return c
+
+
+def verify_gate_b_sub():
+    sub = ROOT / 'results' / 'phase1.6_sub'
+    c = []
+    csv_path = sub / 'per_gene_rank.csv'
+    if csv_path.exists():
+        with open(csv_path) as fh:
+            n_rows = sum(1 for _ in fh) - 1
+        c.append((f'per_gene_rank.csv has >=100 rows (got {n_rows})', n_rows >= 100))
+    else:
+        c.append(('per_gene_rank.csv exists', False))
+    spath = sub / 'splice_distance_profile.json'
+    if spath.exists():
+        j = json.load(open(spath))
+        expected = [-200, -100, -50, -20, -10, 0, 10, 20, 50, 100, 200]
+        donor = j.get('donor', {}); acceptor = j.get('acceptor', {})
+        donor_ok = all(str(d) in donor and donor[str(d)].get('mean_c') is not None for d in expected)
+        acc_ok = all(str(d) in acceptor and acceptor[str(d)].get('mean_c') is not None for d in expected)
+        c.append(('splice donor distance bins complete', donor_ok))
+        c.append(('splice acceptor distance bins complete', acc_ok))
+        c.append(('intron background present', 'intron_mean_c_background' in j))
+    else:
+        c.append(('splice_distance_profile.json exists', False))
+    cdpath = sub / 'cohens_d_matrix.csv'
+    if cdpath.exists():
+        rows = open(cdpath).read().strip().splitlines()
+        nrows = len(rows) - 1
+        ncols = len(rows[0].split(',')) - 1
+        finite = True
+        for r in rows[1:]:
+            for v in r.split(',')[1:]:
+                try:
+                    fv = float(v)
+                    if fv != fv:
+                        finite = False
+                except ValueError:
+                    finite = False
+        c.append((f'cohens_d_matrix is 7x7 (got {nrows}x{ncols})',
+                  nrows == 7 and ncols == 7))
+        c.append(('cohens_d_matrix all finite', finite))
+    else:
+        c.append(('cohens_d_matrix.csv exists', False))
+    return c
+
+
+PHASE_VERIFIERS = {
+    '1.1': verify_1_1, '1.2': verify_1_2, '1.3': verify_1_3,
+    '1.4': verify_1_4, '1.5': verify_1_5,
+    '1.6_chr22': verify_1_6_chr22, '1.6_gate_b': verify_1_6_gate_b,
+    '1.7': verify_1_7,
+    'followup': verify_followup,
+    'gate_b_sub': verify_gate_b_sub,
+}
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in PHASE_VERIFIERS:
+        print(f'usage: verify_phase.py <{"|".join(PHASE_VERIFIERS)}>')
+        sys.exit(2)
+    phase = sys.argv[1]
+    print(f'=== verify {phase} ===')
+    checks = PHASE_VERIFIERS[phase]()
+    all_ok = True
+    for name, ok in checks:
+        m = 'PASS' if ok else 'FAIL'
+        print(f'  [{m}] {name}')
+        if not ok:
+            all_ok = False
+    sys.exit(0 if all_ok else 1)
+
+
+if __name__ == '__main__':
+    main()
