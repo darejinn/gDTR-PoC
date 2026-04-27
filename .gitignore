@@ -64,6 +64,7 @@ results/phase1.6_sub/chr22_position_c.npy
 results/phase1.followup/A_*.pt
 results/phase2.1/chr17_cache.h5
 results/phase2.4/chr17_position_c.npy
+results/phase2.4/chr22_position_c.npy
 results/phase3_main/variants_features.csv
 results/phase3_main/_checkpoint.json
 results/phase5/chr22_quadrants.npy
@@ -72,3 +73,8 @@ data/conservation/
 results/phase4/chr22_cache_hyenadna.h5
 results/phase4/chr22_cache_nt.h5
 results/phase4/chr22_cache_dnabert.h5
+
+# Tier 1 / Tier 2 large caches (regeneratable from scripts/4*.py)
+results/tier1_baselines/delta_h_features.csv
+results/tier1_baselines/*.npz
+results/tier2_compute/*.npz
