@@ -205,6 +205,55 @@ def verify_phase3_pilot():
     return c
 
 
+def verify_phase3_main():
+    p = ROOT / 'results' / 'phase3_main'
+    c = []
+    csv_path = p / 'variants_features.csv'
+    json_path = p / 'main_results.json'
+    vus_path = p / 'vus_ranking.csv'
+    pergene_path = p / 'per_gene_auroc.csv'
+    if csv_path.exists():
+        with open(csv_path) as fh:
+            n_rows = sum(1 for _ in fh) - 1
+        c.append((f'variants_features.csv has > 1000 rows (got {n_rows})', n_rows > 1000))
+    else:
+        c.append(('variants_features.csv exists', False))
+    if json_path.exists():
+        j = json.load(open(json_path))
+        rs = j.get('results_stratified', {})
+        rg = j.get('results_group_kfold', {})
+        rl = j.get('results_logo', {})
+        au_finite = (
+            all(np.isfinite(v.get('mean_auroc', float('nan'))) for v in rs.values())
+            and all(np.isfinite(v.get('mean_auroc', float('nan'))) for v in rg.values())
+        )
+        c.append(('all stratified+group AUROCs finite', au_finite))
+        primary_g = rg.get('dD_cos_vector', {}).get('mean_auroc', float('nan'))
+        c.append((f'per-gene-stratified dD_cos AUROC>=0.55 (got {primary_g:.4f})',
+                  bool(np.isfinite(primary_g) and primary_g >= 0.55)))
+        v = j.get('verdict', {})
+        if v:
+            print(f"  >>> primary group AUROC = {v.get('primary_group_auroc', float('nan')):.4f}")
+            print(f"  >>> primary LOGO AUROC = {v.get('primary_logo_auroc', float('nan')):.4f}")
+            print(f"  >>> ensemble strat AUROC = {v.get('ensemble_strat_auroc', float('nan')):.4f}")
+            print(f"  >>> ensemble - primary (group) = {v.get('ensemble_minus_primary_group', float('nan')):.4f}")
+    else:
+        c.append(('main_results.json exists', False))
+    if vus_path.exists():
+        with open(vus_path) as fh:
+            n_vus = sum(1 for _ in fh) - 1
+        c.append((f'vus_ranking.csv has > 50 rows (got {n_vus})', n_vus > 50))
+    else:
+        c.append(('vus_ranking.csv exists', False))
+    if pergene_path.exists():
+        with open(pergene_path) as fh:
+            n_pg = sum(1 for _ in fh) - 1
+        c.append((f'per_gene_auroc.csv has >= 10 genes (got {n_pg})', n_pg >= 10))
+    else:
+        c.append(('per_gene_auroc.csv exists', False))
+    return c
+
+
 def verify_phase1_followup_full():
     p = ROOT / 'results' / 'phase1.followup_full'
     c = []
@@ -439,6 +488,7 @@ PHASE_VERIFIERS = {
     'phase2_5': verify_phase2_5,
     'phase2_6': verify_phase2_6,
     'phase3_pilot': verify_phase3_pilot,
+    'phase3_main': verify_phase3_main,
     'phase1_followup_full': verify_phase1_followup_full,
 }
 
