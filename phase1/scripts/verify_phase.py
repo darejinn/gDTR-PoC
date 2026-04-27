@@ -175,6 +175,255 @@ def verify_gate_b_sub():
     return c
 
 
+
+def verify_phase3_pilot():
+    p = ROOT / 'results' / 'phase3_pilot'
+    c = []
+    csv_path = p / 'variants_features.csv'
+    json_path = p / 'pilot_results.json'
+    done_path = p / '_pilot_done'
+    if csv_path.exists():
+        with open(csv_path) as fh:
+            n_rows = sum(1 for _ in fh) - 1
+        c.append((f'variants_features.csv has > 200 rows (got {n_rows})', n_rows > 200))
+    else:
+        c.append(('variants_features.csv exists', False))
+    if json_path.exists():
+        j = json.load(open(json_path))
+        results = j.get('results', {})
+        all_finite = all(np.isfinite(r.get('mean_auroc', float('nan'))) for r in results.values()) if results else False
+        c.append(('pilot_results.json AUROCs all finite', all_finite))
+        any_above = any(r.get('mean_auroc', 0.0) > 0.50 for r in results.values())
+        c.append(('at least one feature AUROC > 0.50', any_above))
+        v = j.get('verdict', {})
+        if v:
+            print(f"  >>> primary AUROC = {v.get('primary_dD_jsd_auroc', float('nan')):.4f}")
+            print(f"  >>> best feature = {v.get('best_feature', 'NA')} ({v.get('best_auroc', float('nan')):.4f})")
+    else:
+        c.append(('pilot_results.json exists', False))
+    c.append(('_pilot_done marker exists', done_path.exists()))
+    return c
+
+
+def verify_phase1_followup_full():
+    p = ROOT / 'results' / 'phase1.followup_full'
+    c = []
+    f = p / 'recovery_curve.json'
+    c.append(('recovery_curve.json exists', f.exists()))
+    if f.exists():
+        j = json.load(open(f))
+        per = j.get('per_layer', {})
+        c.append(('recovery_curve has all 32 layers', len(per) == 32))
+        n_ge_90 = 0
+        n_degenerate = 0
+        for L in range(32):
+            key = str(L)
+            if key not in per:
+                continue
+            rec = float(per[key].get('recovery_pct', 0.0))
+            init = float(per[key].get('initial_loss_identity', 0.0))
+            if init < 1e-8 or per[key].get('degenerate', False):
+                n_degenerate += 1
+                continue
+            if rec > 0.90:
+                n_ge_90 += 1
+        c.append((f'>=28 of 32 layers recovery>0.90 (got {n_ge_90}, degenerate={n_degenerate})',
+                  n_ge_90 >= 28))
+        for L in (30, 31):
+            init = float(per.get(str(L), {}).get('initial_loss_identity', 1.0))
+            c.append((f'L={L} degenerate (initial<1e-8)', init < 1e-8))
+    v = p / 'verdict.json'
+    c.append(('verdict.json exists', v.exists()))
+    if v.exists():
+        vj = json.load(open(v))
+        peak = vj.get('peak_divergence_layer')
+        canon = vj.get('canonical_deep_thinking_layer')
+        worst = vj.get('worst_recovery_layer')
+        n90 = vj.get('n_layers_recovery_gt_0p90')
+        print(f'  >>> peak_divergence_layer = L={peak} (initial_loss={vj.get("peak_divergence_initial_loss"):.3e})')
+        print(f'  >>> worst_recovery_layer  = L={worst} (recovery_pct={vj.get("worst_recovery_pct"):.4f})')
+        print(f'  >>> canonical_deep_thinking_layer = L={canon} (recovery_pct={vj.get("canonical_recovery_pct"):.4f})')
+        print(f'  >>> n_layers recovery>0.90 = {n90}')
+        print(f'  >>> degenerate_layers = {vj.get("degenerate_layers")}')
+    return c
+
+
+
+
+# ============================================================================
+# Phase 2 verifiers
+# ============================================================================
+
+def verify_phase2_0():
+    win = ROOT / 'data' / 'baselines' / 'chr17_windows.tsv'
+    lab = ROOT / 'data' / 'annotation' / 'chr17_position_labels.npy'
+    sidecar = ROOT / 'data' / 'annotation' / 'chr17_position_labels.json'
+    gc = ROOT / 'data' / 'baselines' / 'chr17_gene_class.json'
+    c = []
+    if win.exists():
+        with open(win) as fh:
+            n_rows = sum(1 for _ in fh) - 1
+        c.append((f'chr17_windows.tsv has 1500 < N < 30000 (got {n_rows})',
+                  1500 < n_rows < 30000))
+    else:
+        c.append(('chr17_windows.tsv exists', False))
+    if lab.exists():
+        arr = np.load(lab)
+        c.append(('chr17_labels length matches chr17 length (83257441)',
+                  arr.shape[0] == 83257441))
+    else:
+        c.append(('chr17_position_labels.npy exists', False))
+    c.append(('chr17_position_labels.json sidecar exists', sidecar.exists()))
+    if gc.exists():
+        d = json.load(open(gc))
+        cd = sorted(g.get('gene_name') for g in d.get('cancer_driver', []))
+        target = sorted({'TP53', 'BRCA1'})
+        c.append((f'cancer_driver subset of expected (got {cd})', set(cd) >= {'TP53','BRCA1'} and set(cd) <= {'TP53','BRCA1','ATM'}))
+        c.append((f'other has > 100 protein-coding genes (got {len(d.get("other", []))})',
+                  len(d.get('other', [])) > 100))
+    else:
+        c.append(('chr17_gene_class.json exists', False))
+    return c
+
+
+def verify_phase2_1():
+    import h5py
+    p = ROOT / 'results' / 'phase2.1' / 'chr17_cache.h5'
+    win = ROOT / 'data' / 'baselines' / 'chr17_windows.tsv'
+    if not p.exists():
+        return [('chr17_cache.h5 exists', False)]
+    n_expected = None
+    if win.exists():
+        with open(win) as fh:
+            n_expected = sum(1 for _ in fh) - 1
+    with h5py.File(p, 'r') as f:
+        n = f['D_cos'].shape[0]
+        done = int(f['done_mask'][:].sum())
+        d_cos_30 = float(f['D_cos'][0, 30, :].astype(np.float32).mean())
+        d_cos_31 = float(f['D_cos'][0, 31, :].astype(np.float32).mean())
+        d_jsd_31 = float(f['D_jsd'][0, 31, :].astype(np.float32).mean())
+        d_cos_finite = bool(np.isfinite(f['D_cos'][0]).all())
+        d_jsd_finite = bool(np.isfinite(f['D_jsd'][0]).all())
+    c = []
+    if n_expected is not None:
+        c.append((f'N({n}) matches windows TSV ({n_expected})', n == n_expected))
+    c.append((f'all chr17 windows done ({done}/{n})', done == n))
+    c.append((f'D_cos[30]>0.05 (Bug-1 fix preserved): {d_cos_30:.4f}', d_cos_30 > 0.05))
+    c.append((f'D_cos[30] == D_cos[31] arch quirk (delta={abs(d_cos_30 - d_cos_31):.5f})',
+              abs(d_cos_30 - d_cos_31) < 0.01))
+    c.append((f'D_jsd[31] near zero (final ref): {d_jsd_31:.6f}', d_jsd_31 < 1e-3))
+    c.append(('D_cos finite', d_cos_finite))
+    c.append(('D_jsd finite', d_jsd_finite))
+    return c
+
+
+def verify_phase2_2():
+    p = ROOT / 'results' / 'phase2.2' / 'gate_b_chr17.json'
+    if not p.exists():
+        return [('gate_b_chr17.json exists', False)]
+    j = json.load(open(p))
+    cd = j.get('cohens_d_exon_vs_intron')
+    counts = j.get('context_counts', {})
+    return [
+        ('per-context counts present', bool(counts)),
+        ("Cohen's d finite", bool(np.isfinite(cd) if cd is not None else False)),
+        (f'intron count > 100 (got {counts.get("intron", 0)})',
+         counts.get('intron', 0) > 100),
+        (f'exon count > 100 (got {counts.get("coding_exon", 0)})',
+         counts.get('coding_exon', 0) > 100),
+    ]
+
+
+def verify_phase2_3():
+    p = ROOT / 'results' / 'phase2.3' / 'cross_chr_comparison.json'
+    if not p.exists():
+        return [('cross_chr_comparison.json exists', False)]
+    j = json.load(open(p))
+    pc = j.get('per_context', {})
+    expected_ctxs = ['intergenic', 'intron', 'coding_exon', '5utr', '3utr',
+                     'splice_donor', 'splice_acceptor']
+    c = []
+    c.append((f'all 7 contexts present (got {sorted(pc.keys())})',
+              all(k in pc for k in expected_ctxs)))
+    finite_ok = True
+    for k in expected_ctxs:
+        e = pc.get(k, {})
+        for fld in ('chr17_mean_c', 'chr22_mean_c'):
+            v = e.get(fld)
+            if v is None or not np.isfinite(v):
+                finite_ok = False
+                break
+    c.append(('all chr17/chr22 mean_c finite', finite_ok))
+    return c
+
+
+def verify_phase2_4():
+    p = ROOT / 'results' / 'phase2.4' / 'gene_class_stratification.json'
+    if not p.exists():
+        return [('gene_class_stratification.json exists', False)]
+    j = json.load(open(p))
+    groups = j.get('groups', {})
+    c = []
+    c.append((f'>=3 groups present (got {len(groups)})', len(groups) >= 3))
+    finite_ok = True
+    for label, g in groups.items():
+        m = g.get('mean_c')
+        if m is None or not np.isfinite(m):
+            finite_ok = False
+            break
+    c.append(('all group mean_c finite', finite_ok))
+    test = j.get('test_cd_vs_all_other', {})
+    cd_d = test.get('cohens_d_cd_minus_other')
+    c.append(("Cohen's d (CD vs all other) finite",
+              bool(cd_d is not None and np.isfinite(cd_d))))
+    return c
+
+
+def verify_phase2_5():
+    p = ROOT / 'results' / 'phase2.5' / 'splice_chr17_profile.json'
+    if not p.exists():
+        return [('splice_chr17_profile.json exists', False)]
+    j = json.load(open(p))
+    expected = [-200, -100, -50, -20, -10, 0, 10, 20, 50, 100, 200]
+    c = []
+    donor_ok = all(str(d) in j.get('donor', {}) and
+                   j['donor'][str(d)].get('mean_c') is not None for d in expected)
+    acc_ok = all(str(d) in j.get('acceptor', {}) and
+                 j['acceptor'][str(d)].get('mean_c') is not None for d in expected)
+    c.append(('donor distance bins finite', donor_ok))
+    c.append(('acceptor distance bins finite', acc_ok))
+    bg = j.get('intron_mean_c_background')
+    donor_min = None
+    if j.get('donor'):
+        vals = [v.get('mean_c') for v in j['donor'].values()
+                if v.get('mean_c') is not None]
+        if vals:
+            donor_min = min(vals)
+    if bg is not None and donor_min is not None:
+        c.append((f'donor minimum ({donor_min:.3f}) below intron bg ({bg:.3f})',
+                  donor_min < bg))
+    else:
+        c.append(('donor min vs bg comparable', False))
+    return c
+
+
+def verify_phase2_6():
+    p = ROOT / 'PHASE2_DECISION.md'
+    if not p.exists():
+        return [('PHASE2_DECISION.md exists', False)]
+    text = p.read_text()
+    return [
+        ('PHASE2_DECISION.md exists', True),
+        ('mentions Phase 2.0', 'Phase 2.0' in text),
+        ('mentions Phase 2.1', 'Phase 2.1' in text),
+        ('mentions Phase 2.2', 'Phase 2.2' in text),
+        ('mentions Phase 2.3', 'Phase 2.3' in text),
+        ('mentions Phase 2.4', 'Phase 2.4' in text),
+        ('mentions Phase 2.5', 'Phase 2.5' in text),
+        ('no missing JSON warning', 'could not load' not in text.lower()),
+    ]
+
+
 PHASE_VERIFIERS = {
     '1.1': verify_1_1, '1.2': verify_1_2, '1.3': verify_1_3,
     '1.4': verify_1_4, '1.5': verify_1_5,
@@ -182,6 +431,15 @@ PHASE_VERIFIERS = {
     '1.7': verify_1_7,
     'followup': verify_followup,
     'gate_b_sub': verify_gate_b_sub,
+    'phase2_0': verify_phase2_0,
+    'phase2_1': verify_phase2_1,
+    'phase2_2': verify_phase2_2,
+    'phase2_3': verify_phase2_3,
+    'phase2_4': verify_phase2_4,
+    'phase2_5': verify_phase2_5,
+    'phase2_6': verify_phase2_6,
+    'phase3_pilot': verify_phase3_pilot,
+    'phase1_followup_full': verify_phase1_followup_full,
 }
 
 

@@ -582,3 +582,36 @@ Pending sub-experiments (in progress as of write time):
 - Gate B sub-analysis (per-gene rank + splice fine + Cohen's d matrix) agent
 
 Updates will be appended to this document upon completion.
+
+---
+
+## 11. Post-Phase-1 Updates (2026-04-27)
+
+### 11.1 Phase 3 ClinVar Pilot — STRONG GO ⭐
+
+**Scope**: TP53 + BRCA1 (chr17), 1000 variants (250 × 2 genes × 2 categories), balanced cap. 10-fold StratifiedKFold CV, sklearn LogisticRegression.
+
+**Results**:
+
+| Feature | AUROC | 95% CI | Verdict |
+|---|---:|---|---|
+| **ΔD_cos vector (32-d, UR primary)** | **0.831** | [0.799, 0.862] | ⭐ best |
+| ΔD_jsd vector (32-d) | 0.790 | [0.755, 0.825] | ✅ above 0.65 |
+| max\|ΔD_jsd\| (scalar) | 0.804 | [0.776, 0.831] | ✅ |
+| Δc_interp (scalar @ γ=0.397) | 0.360 → flipped 0.640 | [0.331, 0.389] | weak (single-threshold loses info) |
+
+**Verdict**: All vector-based features clear 0.65 PASS threshold by wide margin. **UR-gDTR (cosine) slightly outperforms JSD-gDTR** — strengthens Phase 0 lock of UR as primary lens.
+
+**Implications**:
+1. Phase 3 main analysis should proceed (scale to all 15 genes × full P/LP+B/LB SNV set)
+2. ΔD_cos vector should be elevated to **co-primary** alongside ΔD_jsd in main analysis
+3. Pathogenicity signal is encoded in **per-layer divergence pattern**, not collapsed scalar
+4. Δc_interp single-threshold loses information — use vector representation throughout
+
+**Wall time**: 14.8 min on H200 (~1.13 variants/sec, evo2_7b_base 8K context).
+
+### 11.2 Phase 1 Full Landscape (32-layer tuned lens) — IN PROGRESS
+*(awaiting completion)*
+
+### 11.3 Phase 2 Multi-chromosome (chr17 + cross-chr + gene-class) — IN PROGRESS
+*(2.0 prep CPU running; 2.1 GPU forward will start after current GPU agents finish)*
