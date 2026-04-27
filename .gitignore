@@ -64,3 +64,5 @@ results/phase1.6_sub/chr22_position_c.npy
 results/phase1.followup/A_*.pt
 results/phase2.1/chr17_cache.h5
 results/phase2.4/chr17_position_c.npy
+results/phase3_main/variants_features.csv
+results/phase3_main/_checkpoint.json
