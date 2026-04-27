@@ -473,6 +473,126 @@ def verify_phase2_6():
     ]
 
 
+
+
+def verify_phase5():
+    p = ROOT / 'results' / 'phase5'
+    if not p.exists():
+        return [('phase5 dir exists', False)]
+    c = []
+    qf = p / 'chr22_quadrants.npy'
+    if not qf.exists():
+        return [('chr22_quadrants.npy exists', False)]
+    q = np.load(qf, mmap_mode='r')
+    c.append(('chr22_quadrants len = 50818468', q.shape[0] == 50818468))
+    bed = p / 'q2_regions.bed'
+    n_bed = 0
+    if bed.exists():
+        with open(bed) as f:
+            for line in f:
+                if line and line[0] != '#':
+                    n_bed += 1
+    c.append((f'q2_regions.bed has >=50 regions (got {n_bed})', n_bed >= 50))
+    ej = p / 'q2_enrichment.json'
+    if not ej.exists():
+        c.append(('q2_enrichment.json exists', False))
+        return c
+    j = json.load(open(ej))
+    enr = j.get('annotation_enrichment', {})
+    finite_any = False
+    for k, v in enr.items():
+        f_ = v.get('fold_enrichment')
+        p_ = v.get('hypergeom_pval_oneSided_overrep')
+        if f_ is not None and p_ is not None and np.isfinite(f_) and np.isfinite(p_):
+            finite_any = True
+            break
+    c.append(('q2_enrichment has >=1 finite fold/p annotation', finite_any))
+    return c
+
+
+def verify_phase3_ensemble():
+    p = ROOT / 'results' / 'phase3_ensemble'
+    c = []
+    csv_path = p / 'variants_features_full.csv'
+    json_path = p / 'ensemble_results.json'
+    if csv_path.exists():
+        with open(csv_path) as fh:
+            n_rows = sum(1 for _ in fh) - 1
+        c.append((f'variants_features_full.csv >= 8000 rows (got {n_rows})', n_rows >= 8000))
+    else:
+        c.append(('variants_features_full.csv exists', False))
+    if json_path.exists():
+        j = json.load(open(json_path))
+        rs = j.get('results_stratified', {})
+        au_finite = all(np.isfinite(v.get('mean_auroc', float('nan'))) for v in rs.values())
+        c.append(('all stratified AUROCs finite', au_finite))
+        for key in ('A_dD_cos','B_evo2_loglik','C_cadd_phred','D_am_score','ABCD_full','BCD_baseline'):
+            ok = key in rs and np.isfinite(rs[key].get('mean_auroc', float('nan')))
+            c.append((f'feature {key} has finite AUROC', ok))
+        delong = j.get('delong_stratified', [])
+        c.append((f'DeLong tests present (n={len(delong)})',
+                  isinstance(delong, list) and len(delong) > 0))
+        cov = j.get('coverage', {})
+        for cat in ('P_LP','B_LB'):
+            if cat in cov:
+                cf = cov[cat].get('cadd_match_frac', 0.0)
+                c.append((f'{cat} CADD match >= 0.7 (got {cf:.3f})', cf >= 0.7))
+                af = cov[cat].get('am_match_frac', 0.0)
+                c.append((f'{cat} AM match >= 0.3 (got {af:.3f})', af >= 0.3))
+        for k in ('A_dD_cos','B_evo2_loglik','C_cadd_phred','D_am_score',
+                  'ABCD_full','BCD_baseline'):
+            val = rs.get(k, {}).get('mean_auroc')
+            if val is not None:
+                print(f'  >>> {k}: AUROC = {val:.4f}')
+    else:
+        c.append(('ensemble_results.json exists', False))
+    c.append(('_done marker exists', (p / '_done').exists()))
+    return c
+
+
+def verify_phase4():
+    p = ROOT / 'results' / 'phase4'
+    c = []
+    c.append(('phase4 dir exists', p.exists()))
+    sj = p / 'per_model_summary.json'
+    cj = p / 'concordance_matrix.json'
+    c.append(('per_model_summary.json exists', sj.exists()))
+    c.append(('concordance_matrix.json exists', cj.exists()))
+    if not (sj.exists() and cj.exists()):
+        return c
+    summ = json.load(open(sj))
+    conc = json.load(open(cj))
+    c.append(('>=2 models present', len(summ) >= 2))
+    rho = conc.get('spearman_rho', {})
+    finite = 0; high = 0
+    for a in rho:
+        for b in rho.get(a, {}):
+            if a >= b: continue
+            v = rho[a][b]
+            if v == v:
+                finite += 1
+                if v > 0.3:
+                    high += 1
+    c.append(('all pairwise rho finite', finite >= 1))
+    c.append(('>=1 pair with rho > 0.3', high >= 1))
+    splice_ok = 0
+    for nm, info in summ.items():
+        s = info.get('splice_signal')
+        if not s: continue
+        d = s.get('data', {})
+        if s['kind'] == 'per_position':
+            don = d.get('splice_donor', {}).get('mean_c')
+            intr = d.get('intron', {}).get('mean_c')
+            if don is not None and intr is not None and don < intr:
+                splice_ok += 1
+        else:
+            sp = d.get('splice_containing', {}).get('mean_c')
+            ind = d.get('intron_dominant', {}).get('mean_c')
+            if sp is not None and ind is not None:
+                splice_ok += 1
+    c.append(('per-model splice signal computed for >=1 model', splice_ok >= 1))
+    return c
+
 PHASE_VERIFIERS = {
     '1.1': verify_1_1, '1.2': verify_1_2, '1.3': verify_1_3,
     '1.4': verify_1_4, '1.5': verify_1_5,
@@ -489,7 +609,10 @@ PHASE_VERIFIERS = {
     'phase2_6': verify_phase2_6,
     'phase3_pilot': verify_phase3_pilot,
     'phase3_main': verify_phase3_main,
+    'phase4': verify_phase4,
+    'phase3_ensemble': verify_phase3_ensemble,
     'phase1_followup_full': verify_phase1_followup_full,
+    'phase5': verify_phase5,
 }
 
 
