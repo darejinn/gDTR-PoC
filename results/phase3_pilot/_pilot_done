@@ -1,0 +1,8 @@
+{
+  "primary_dD_jsd_auroc": 0.7899200000000001,
+  "primary_passes_0.65": true,
+  "primary_passes_0.55": true,
+  "any_above_chance": true,
+  "best_feature": "dD_cos_vector",
+  "best_auroc": 0.8306000000000001
+}
