@@ -2,15 +2,41 @@
 
 **A training-free interpretability framework for genomic causal language models, based on layer-wise prediction convergence (settling depth).**
 
-This repository contains the Phase 0 proof-of-concept work: methodology, code, results, figures, and pre-registered Phase 1 plan for transferring Chen et al. (2026)'s NLP "Deep-Thinking Ratio" (DTR) to genomic CLMs.
+This repository contains the full method calibration (Phase 0–1), genome-wide replication (Phase 2), variant-level pathogenicity classification (Phase 3), cross-architecture validation (Phase 4), conservation discordance map (Phase 5), and Tier 1+2 robustness/diagnostic extensions for transferring Chen et al. (2026)'s NLP "Deep-Thinking Ratio" (DTR) to genomic CLMs.
+
+---
+
+## What's new (2026-04-28)
+
+- **Headline finding**: gDTR ΔD_cos vector achieves AUROC **0.844** [0.831, 0.857] on 15 cancer-gene ClinVar variants (10K), with **statistically significant incremental information** over Evo 2 likelihood (DeLong p = **3.6e-15**, +0.017 AUROC). See [`docs/findings/phase3_variant_pathogenicity.md`](docs/findings/phase3_variant_pathogenicity.md).
+- **Manuscript v2.0** with Tier 1+2 sections: [`ICML_MANUSCRIPT_DRAFT.md`](ICML_MANUSCRIPT_DRAFT.md).
+- **Tier 1 extensions** (per-layer ablation, mechanism case studies, bootstrap stability): [`docs/findings/tier1_extensions.md`](docs/findings/tier1_extensions.md).
+- **Tier 2 extensions** (Q2 functional validation against eQTL/GWAS/cCRE-ELS, HP sensitivity, failure analysis): [`docs/findings/tier2_extensions.md`](docs/findings/tier2_extensions.md).
+- **Repo reorganization**: per-phase findings consolidated under [`docs/findings/`](docs/findings/) and pre-registered decisions / appendices under [`docs/decisions/`](docs/decisions/). The legacy `PHASE1_FINDINGS.md` (which actually covered Phases 1–5) has been split; see [`docs/findings/_split_plan.md`](docs/findings/_split_plan.md) for the redistribution table.
+
+## Phase status table
+
+| Phase | Topic | Status | Headline doc |
+|---|---|---|---|
+| 0 | HyenaDNA-medium-160k PoC | DONE | [`docs/findings/phase0_calibration.md`](docs/findings/phase0_calibration.md) |
+| 1 | Evo 2 7B method calibration | DONE | [`docs/findings/phase1_evo2_calibration.md`](docs/findings/phase1_evo2_calibration.md) |
+| 2 | chr17 multi-chromosome replication | DONE | [`docs/findings/phase2_chr17_replication.md`](docs/findings/phase2_chr17_replication.md) |
+| 3 | ClinVar variant pathogenicity (15 genes, 10K variants, AUROC 0.844) | DONE | [`docs/findings/phase3_variant_pathogenicity.md`](docs/findings/phase3_variant_pathogenicity.md) |
+| 4 | Cross-architecture validation (Evo 2 / HyenaDNA / NT-v2 / DNABERT-2) | DONE | [`docs/findings/phase4_cross_architecture.md`](docs/findings/phase4_cross_architecture.md) |
+| 5 | Q2 conservation discordance | DONE | [`docs/findings/phase5_conservation_discordance.md`](docs/findings/phase5_conservation_discordance.md) |
+| Tier 1 | Per-layer ablation, case studies, bootstrap stability, baselines | T1.1/T1.3/T1.4 DONE; T1.2 running | [`docs/findings/tier1_extensions.md`](docs/findings/tier1_extensions.md) |
+| Tier 2 | Q2 functional validation, HP sensitivity, failure analysis, compute cost | T2.1/T2.2/T2.3 DONE; T2.4 running | [`docs/findings/tier2_extensions.md`](docs/findings/tier2_extensions.md) |
 
 ---
 
 ## Status
 
-**Phase 0 (PoC on HyenaDNA-medium-160k): COMPLETE** — 14/14 tasks, 4 paper-grade findings, ~38 minutes compute on a single RTX 3090 (no cloud cost).
+**Phase 0–5 + Tier 1+2 (excluding T1.2/T2.4 still on server): COMPLETE.**
+See the Phase status table above and [`docs/findings/README.md`](docs/findings/README.md) for per-phase docs.
 
-**Phase 1 (Evo 2 7B main experiment): pre-registered, ready to start.** See `PHASE1_DECISIONS.md`.
+**Phase 0 (PoC on HyenaDNA-medium-160k)**: 14/14 tasks, 4 paper-grade findings, ~38 minutes compute on a single RTX 3090.
+
+**Phase 1 (Evo 2 7B method calibration)**: 8/8 sub-stages PASS, ~90 min H200, three paper-grade findings (L31 idle / splice deep-thinking / HP transferability).
 
 ## Three (+1 causal) paper-grade findings
 
@@ -26,24 +52,50 @@ This repository contains the Phase 0 proof-of-concept work: methodology, code, r
 
 ```
 .
-├── README.md                  This file
-├── LICENSE                    MIT
+├── README.md                       This file
+├── LICENSE                         MIT
+├── ICML_MANUSCRIPT_DRAFT.md        Manuscript v2.0 (Tier 1+2 integrated)
 ├── docs/
-│   ├── phase0_design.md       Pre-registered Phase 0 design (locked) + Appendix C corrections
-│   ├── PHASE0_FINDINGS.md     Comprehensive Phase 0 synthesis (~6,400 words)
-│   ├── PHASE0_DECISION.md     Gate verdicts + Phase 1 lock (chain-agent finalized)
-│   └── PHASE1_DECISIONS.md    Pre-registered Phase 1 plan
-├── src/                       10 modules: model_loader, logit_lens, ur_gdtr, gdtr,
-│                              variant_delta, controls, viz, stats, constants
-├── tests/                     21 pytest tests (all passing)
-├── scripts/                   13 analysis scripts (00 smoke → E5 tuned lens)
+│   ├── phase0_design.md            Pre-registered Phase 0 design (locked) + Appendix C corrections
+│   ├── PHASE0_FINDINGS.md          Comprehensive Phase 0 synthesis (~6,400 words)
+│   ├── PHASE0_DECISION.md          Phase 0 gate verdicts + Phase 1 lock
+│   ├── PHASE1_DECISIONS.md         Pre-registered Phase 1 plan
+│   ├── PHASE1_EXECUTION_PLAN.md    Server-specific Phase 1 execution doc
+│   ├── findings/                   Per-phase synthesis docs (NEW 2026-04-28)
+│   │   ├── README.md               Phase status table + cross-reference index
+│   │   ├── phase0_calibration.md
+│   │   ├── phase1_evo2_calibration.md
+│   │   ├── phase2_chr17_replication.md
+│   │   ├── phase3_variant_pathogenicity.md
+│   │   ├── phase4_cross_architecture.md
+│   │   ├── phase5_conservation_discordance.md
+│   │   ├── tier1_extensions.md
+│   │   ├── tier2_extensions.md
+│   │   └── _split_plan.md
+│   └── decisions/                  Locked decisions / auto-generated gate verdicts
+│       ├── phase1_decisions.md     (= legacy PHASE1_DECISION.md, auto-generated)
+│       ├── phase1_appendix_c.md    Evo 2 7B architectural facts (smoke output)
+│       ├── phase1_execution_plan.md
+│       └── phase2_decisions.md     (= legacy PHASE2_DECISION.md, auto-generated)
+├── src/                            10 modules: model_loader, logit_lens, ur_gdtr, gdtr, …
+├── phase1/                         Phase 1 src + scripts + tests + lock files
+├── tests/                          21 pytest tests (Phase 0)
+├── scripts/                        Analysis scripts; figures/ subdir generates F1-F7 + S1-S6
 ├── results/
-│   ├── figures/               16+ publication-quality figures (PDF + PNG)
-│   ├── tables/                15 result CSVs
-│   └── runs/                  Per-stage JSON logs (raw seeds, runtime, host info)
-├── requirements.txt           Pinned package versions
-├── env_setup.sh               Idempotent env bootstrap (incl. apt deps for Linux/CUDA)
-└── 260426_연구계획서.docx       Original Korean research proposal (full project context)
+│   ├── figures/                    Phase 0 publication figures
+│   ├── figures_v2/                 Manuscript v2.0 figures (F1-F7, S1-S6, ~5 MB)
+│   ├── phase1.{1..6}*/             Per-phase JSONs + figures (Phase 1)
+│   ├── phase2.*/                   Phase 2 (chr17) outputs
+│   ├── phase3_main/, phase3_ensemble/
+│   ├── phase4/                     Cross-arch (4 models) summaries + per-model figures
+│   ├── phase5/                     Q2 BED + enrichment table
+│   ├── tier1_per_layer/, tier1_bootstrap/, tier1_case_studies/
+│   ├── tier2_q2_functional/, tier2_sensitivity/, tier2_failure/
+│   ├── _verification/              Independent CPU bundle verification (cross-checked)
+│   └── runs/                       Per-stage JSON logs (raw seeds, runtime, host info)
+├── requirements.txt                Pinned package versions
+├── env_setup.sh                    Idempotent env bootstrap (incl. apt deps for Linux/CUDA)
+└── 260426_연구계획서.docx           Original Korean research proposal (full project context)
 ```
 
 Large data files (FASTA, GENCODE, ClinVar VCFs) and `.npz` analysis caches are NOT committed (regenerable from `scripts/`). See `data/` setup in `env_setup.sh`.
