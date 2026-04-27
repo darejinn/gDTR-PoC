@@ -1,0 +1,60 @@
+{
+  "phase": "phase3_main",
+  "config": {
+    "gamma_cos": 0.39663,
+    "seed": 42,
+    "context_half": 3000,
+    "genes": [
+      "BRCA1",
+      "BRCA2",
+      "TP53",
+      "EGFR",
+      "KRAS",
+      "BRAF",
+      "PIK3CA",
+      "APC",
+      "MLH1",
+      "MSH2",
+      "PTEN",
+      "RB1",
+      "VHL",
+      "ATM",
+      "PALB2"
+    ],
+    "train_categories": [
+      "P_LP",
+      "B_LB"
+    ],
+    "hold_categories": [
+      "VUS"
+    ],
+    "model_variant": "evo2_7b_base (8K context, no FP8)"
+  },
+  "n_total_variants": 10910,
+  "n_processed_variants": 10910,
+  "n_errors": 0,
+  "n_nans": 0,
+  "category_counts": {
+    "VUS": 2902,
+    "B_LB": 4494,
+    "P_LP": 3514
+  },
+  "per_gene_counts": {
+    "PTEN": 891,
+    "ATM": 900,
+    "KRAS": 194,
+    "BRCA2": 900,
+    "RB1": 738,
+    "PALB2": 828,
+    "TP53": 866,
+    "BRCA1": 900,
+    "MSH2": 900,
+    "VHL": 582,
+    "MLH1": 900,
+    "PIK3CA": 431,
+    "APC": 900,
+    "EGFR": 550,
+    "BRAF": 430
+  },
+  "wall_time_sec": 6306.521613836288
+}
