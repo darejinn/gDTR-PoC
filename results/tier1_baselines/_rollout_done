@@ -1,0 +1,21 @@
+{
+  "phase": "tier1_baselines_rollout",
+  "config": {
+    "seed": 42,
+    "context_half": 3000,
+    "model_variant": "evo2_7b_base (8K context, no FP8)",
+    "attn_layers": [
+      3,
+      10,
+      17,
+      24,
+      31
+    ],
+    "rollout_method": "row-only approximation at variant position"
+  },
+  "n_total_variants": 10910,
+  "n_processed_variants": 10910,
+  "n_errors": 0,
+  "n_nans": 0,
+  "wall_time_sec": 5658.889654636383
+}

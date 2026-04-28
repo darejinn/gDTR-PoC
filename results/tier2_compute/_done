@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "rows": [
+    {
+      "method": "gDTR_forward_dD_cos",
+      "n_variants": 100,
+      "total_wall_sec": 54.00690197944641,
+      "mean_per_variant_ms": 540.0690197944641,
+      "peak_vram_gb": 16.737842559814453,
+      "multi_gpu_scalable": true
+    },
+    {
+      "method": "delta_h_norm",
+      "n_variants": 100,
+      "total_wall_sec": 51.71062779426575,
+      "mean_per_variant_ms": 517.1062779426575,
+      "peak_vram_gb": 16.737842559814453,
+      "multi_gpu_scalable": true
+    },
+    {
+      "method": "attention_rollout",
+      "n_variants": 100,
+      "total_wall_sec": 51.80155158042908,
+      "mean_per_variant_ms": 518.0155158042908,
+      "peak_vram_gb": 15.958911895751953,
+      "multi_gpu_scalable": true
+    },
+    {
+      "method": "integrated_gradients_8step",
+      "n_variants": 100,
+      "total_wall_sec": 174.9273602962494,
+      "mean_per_variant_ms": 1749.273602962494,
+      "peak_vram_gb": 20.15558958053589,
+      "multi_gpu_scalable": true
+    }
+  ]
+}

@@ -78,3 +78,5 @@ results/phase4/chr22_cache_dnabert.h5
 results/tier1_baselines/delta_h_features.csv
 results/tier1_baselines/*.npz
 results/tier2_compute/*.npz
+results/tier1_baselines/ig_features.csv
+results/tier1_baselines/rollout_features.csv
