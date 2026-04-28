@@ -80,3 +80,9 @@ results/tier1_baselines/*.npz
 results/tier2_compute/*.npz
 results/tier1_baselines/ig_features.csv
 results/tier1_baselines/rollout_features.csv
+# Backup scripts
+scripts/*.bak
+scripts/*.bak2
+scripts/*.b64
+# Logs (large + non-deterministic)
+logs/
