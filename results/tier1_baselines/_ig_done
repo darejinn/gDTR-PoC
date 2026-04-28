@@ -1,0 +1,15 @@
+{
+  "phase": "tier1_baselines_ig",
+  "config": {
+    "seed": 42,
+    "context_half_ig": 500,
+    "ig_steps": 8,
+    "target_layer": 29,
+    "model_variant": "evo2_7b_base (8K context, no FP8)"
+  },
+  "n_total_variants": 10910,
+  "n_processed_variants": 10910,
+  "n_errors": 0,
+  "n_nans": 0,
+  "wall_time_sec": 18459.49924850464
+}
