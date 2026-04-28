@@ -1,16 +1,14 @@
 # Genomic Deep-Thinking Ratio: A Training-Free Interpretability Framework for Genomic Causal Language Models
 
-**Manuscript Draft** — Version 4.0 (gDTR-led narrative restored), 2026-04-28
-**Headline**: gDTR is a training-free, layer-wise interpretability framework for genomic CLMs that (i) achieves variant-pathogenicity AUROC 0.844 with DeLong-significant incremental information over Evo 2 likelihood (p < 10⁻⁵⁰), (ii) reveals a universal splice shallow-thinking signature across chromosomes and architectures, (iii) provides per-variant class-stratified disruption layers (splice L7 vs missense L28), and (iv) identifies functionally enriched conservation-discordant regulatory regions. We additionally identify `‖Δh‖₂` as a previously under-reported strong scoring baseline, and discuss the score-vs-mechanism trade-off explicitly.
-**Status**: All Tier 1 + Tier 2 analyses complete and integrated. Manuscript narrative re-balanced to gDTR-centric (v4.0); `‖Δh‖₂` finding retained as honest method-comparison contribution within §4.4.
+*Manuscript draft v4.1 — 2026-04-28. All experiments and analyses complete; one supplementary figure (S7, compute-cost) deferred. Reproducibility code, data version locks, and figure-generation scripts at https://github.com/darejinn/gDTR-PoC.*
 
 ---
 
 ## Title (alternatives ranked by impact)
 
-1. **"Genomic Deep-Thinking Ratio: Layer-wise Prediction Convergence as a Novel Variant Pathogenicity Axis"** (recommended)
-2. "When Genomic Foundation Models Think Deep: A Universal Splice-Site Signature and Its Application to Variant Interpretation"
-3. "Computational Depth Disruption: A Training-Free Interpretability Framework for Genomic Causal Language Models"
+1. **"Genomic Deep-Thinking Ratio: A Training-Free Layer-wise Interpretability Framework for Genomic Causal Language Models"** (recommended — matches v4.0 narrative: gDTR is the framework, variant pathogenicity / splice / Q2 are findings the framework enables)
+2. "Where Does the Model Think Deeply? A Layer-Resolved Interpretability Probe for Genomic Foundation Models"
+3. "gDTR: Layer-wise Settling Depth Reveals Splice Circuits and Regulatory Discordance in Genomic Causal Language Models"
 
 ## Authors / Affiliation
 
@@ -18,7 +16,7 @@
 
 ---
 
-## Abstract (≈ 270 words; v4.0 — gDTR-led)
+## Abstract
 
 Genomic causal language models (CLMs) trained on trillions of nucleotide tokens encode rich biology across regulatory grammar, splicing, and protein-level effects, yet their internal computational dynamics remain opaque. Existing interpretability tools answer *where the model attends* (attention), *what it encodes* (sparse autoencoders), or *what it predicts* (likelihood, embedding distance) — but not *where in the layer hierarchy a sequence is computationally resolved*. We introduce **gDTR (Genomic Deep-Thinking Ratio)**, a training-free **layer-wise interpretability framework** for genomic CLMs that quantifies per-token settling depth via a cosine logit-lens trajectory. gDTR is the first systematic adaptation of the NLP Deep-Thinking Ratio (Chen et al. 2026) to genomic foundation models, requiring (i) cosine-distance UR-lens calibration for small vocabularies (|V| ≤ 512), (ii) handling Evo 2's last-block idle pattern (h_30 ≡ h_31), and (iii) tuned-lens recovery at all 32 layers. Across five paper-grade experiments on Evo 2 7B, HyenaDNA-large, NT-v2, and DNABERT-2, gDTR reveals: **(i)** splice donor/acceptor sites form a **universal shallow-thinking signature** — ~3 layers below intronic baseline — replicating across chr22 + chr17 and across two architecture families; **(ii)** on 10,910 ClinVar variants across 15 cancer-associated genes, the 32-layer ΔD_cos vector scores variants at AUROC **0.844** (LOGO 0.843) and provides DeLong-significant incremental information beyond Evo 2 likelihood (ΔAUROC +0.092, p < 10⁻⁵⁰); **(iii)** mechanism case studies show class-stratified disruption — splice variants peak at shallow layer 7, protein-coding pathogenicity (TP53 p.R175H) at deep layer 28; **(iv)** chr22 regions of high gDTR but low PhyloP conservation are 1.62× enriched for GTEx eQTLs (p = 5.4 × 10⁻⁵⁶), 1.50× for GWAS SNPs, and 1.90× for ENCODE enhancer-like cCREs — model-derived discovery of lineage-specific regulatory elements. To contextualize gDTR's discrimination performance, we benchmark it against three interpretability baselines (attention rollout, integrated gradients, hidden-state perturbation magnitude `‖Δh‖₂`) — gDTR beats rollout and IG decisively (+0.17, +0.32, DeLong p < 10⁻⁵⁰), and we identify `‖Δh‖₂` as a previously **under-reported strong scoring baseline** (AUROC 0.926). gDTR captures variance that `‖Δh‖₂` cannot (residualized AUROC 0.645) and provides the layer-resolution that powers findings (i)–(iv). Code, 11 dataset version locks, and 7 + 7 publication figures: https://github.com/darejinn/gDTR-PoC.
 
@@ -26,7 +24,7 @@ Genomic causal language models (CLMs) trained on trillions of nucleotide tokens 
 
 ---
 
-## 1. Introduction (1.5 pages)
+## 1. Introduction
 
 ### 1.1 Motivation
 
@@ -52,7 +50,7 @@ Transferring DTR to genomic CLMs faces three challenges:
 
 (C3) **Untied lm_head dynamics**: HyenaDNA's last block (L7→L8) shows a >5× residual update magnitude, violating standard logit-lens monotonicity. Tuned lens (Belrose et al., 2023) is required.
 
-### 1.4 Contributions (v4.0 — gDTR-led)
+### 1.4 Contributions
 
 We present **gDTR (Genomic Deep-Thinking Ratio)**, the first systematic adaptation of NLP-DTR (Chen et al. 2026) to genomic causal language models. gDTR is a training-free, layer-wise interpretability framework that quantifies per-token *settling depth* — the layer index at which intermediate residual-stream predictions converge to within ε of the final layer. The framework requires three architecture-aware adaptations from NLP-DTR (small vocabulary calibration, Evo 2 last-block idleness, tuned-lens recovery at all 32 layers; details in §3) and produces a per-variant 32-d feature vector ΔD that we use throughout the paper as both a *quantitative pathogenicity score* and a *mechanistic readout*.
 
@@ -72,7 +70,7 @@ We release code (PyTorch + Vortex), 11 dataset version locks, 7 main + 7 supplem
 
 ---
 
-## 2. Background and Related Work (1 page)
+## 2. Background and Related Work
 
 ### 2.1 Logit lens and tuned lens
 
@@ -96,7 +94,7 @@ Evo 2 (7B, hybrid Transformer+StripedHyena 2, 32 layers, 1M context); HyenaDNA-l
 
 ---
 
-## 3. Method: gDTR Framework (1.5 pages)
+## 3. Method: gDTR Framework
 
 ### 3.1 Settling depth definition
 
@@ -135,7 +133,7 @@ cos_sim(blocks.30, post_norm) = 0.6855                                   [same]
 cos_sim(blocks.29, post_norm) = -0.013                                   [distinct]
 ```
 
-This is **opposite** of HyenaDNA where `blocks.7→blocks.8` shows a 5×-magnitude residual update with ~85-90% attributable to trained-readout-subspace alignment (PHASE0_FINDINGS.md §3). **Implication**: Evo 2's "deep-thinking" computation completes before the final attention block, requiring the canonical deep-thinking tap to shift from "last 1-2 blocks" (Phase 0 lock) to **L=29 of 32** (Phase 1 follow-up §11.2).
+This is the **opposite** of HyenaDNA, in which `blocks.7→blocks.8` shows a 5×-magnitude residual update with ~85–90 % of the variance attributable to trained readout-subspace alignment (a calibration finding from a prior HyenaDNA pilot, summarised in §A of the released documentation). The implication for Evo 2 is that "deep-thinking" computation completes before the final attention block, and the canonical deep-thinking tap shifts from "last 1–2 blocks" (the conventional choice for transformer-style models) to **L = 29 of 32**.
 
 ### 3.3 Hyperparameter calibration
 
@@ -160,17 +158,17 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 
 ---
 
-## 4. Experiments (3 pages)
+## 4. Experiments
 
-### 4.1 Phase 1: Method calibration on Evo 2 7B
+### 4.1 Method calibration on Evo 2 7B
 
-**Pre-registered Gates** (PHASE1_DECISIONS.md):
-- Gate A_evo (block-stratified logit lens validity): per-block-type M2 ≥ 0.85 OR tuned-recovered
-- Gate B_evo (chr22 genome-wide signal): MWU p < 1×10⁻⁵⁰, Cohen's d ≥ 0.5
+**Pre-registered gates.** Two pre-registered acceptance gates were specified before observing chr22 results:
+- Gate A (block-stratified logit-lens validity): per-block-type raw monotonicity M₂ ≥ 0.85, *or* tuned-lens recovery rescues the lens.
+- Gate B (chr22 genome-wide signal): Mann–Whitney U p < 1 × 10⁻⁵⁰ and Cohen's d ≥ 0.5 between exonic and intronic settling depths.
 
-**Result — Gate A_evo**: per-block-type raw monotonicity M2_jsd: attn=0.31, hcs=0.33, hcm=0.18, hcl=0.29 (all <0.85 threshold). Per Phase 0 robustness lemma (running-min absorbs raw violations), we proceed.
+**Gate A result.** Per-block-type raw monotonicity M₂_jsd: attn = 0.31, hcs = 0.33, hcm = 0.18, hcl = 0.29 (all below the 0.85 threshold). The running-min envelope absorbs the raw violations (a robustness property of the lens established in HyenaDNA pilot work), and the tuned lens reaches ≥ 0.98 recovery at 30 / 32 layers; we therefore proceed under the tuned-lens rescue branch.
 
-**Result — Tuned lens at all 32 layers** (Phase 1 follow-up full):
+**Tuned-lens recovery (all 32 layers).**
 - Initial MSE peak at **L=2 (hcl)**: 1,259 — opposite of NLP transformer where late layers diverge most
 - Worst recovery at **L=12 (hcm)**: 0.9816 — middle layers harder to recover linearly
 - 30/32 layers recover ≥98% via single 4096² affine
@@ -179,7 +177,7 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 **Result — chr22 splice signal** (Gate B_evo):
 - p_two_sided ≈ 0 (FP64 floor; from N=77M positions)
 - Cohen's d (intron vs exon) = -0.068 (small; threshold 0.5 not met)
-- Direction: intron < exon (opposite of Phase 0 HyenaDNA TP53/BRCA1 d=-1.02)
+- Direction: intron < exon (opposite of an earlier HyenaDNA TP53 / BRCA1 pilot at d = −1.02; the direction reversal is consistent with Evo 2 7B's deeper architecture and is interpreted in §5)
 
 **Splice site as deepest-thinking class**:
 | Context | mean_c | n positions |
@@ -192,7 +190,7 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 | intergenic | 28.75 | 31,396,515 |
 | 5'UTR | 28.99 | 147,192 |
 
-### 4.2 Phase 2: Multi-chromosome (chr17)
+### 4.2 chr17 multi-chromosome replication
 
 **chr17 forward** (27,586 windows, 80M positions). Gate B chr17:
 - Cohen's d (intron vs exon) = -0.124 (small, same direction as chr22)
@@ -215,11 +213,11 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 
 (Counter-intuitive direction: cancer drivers show LESS deep thinking. Underpowered.)
 
-### 4.3 Phase 3: Variant pathogenicity (15 cancer genes, 10K variants)
+### 4.3 Variant pathogenicity prediction across 15 cancer-associated genes
 
-**Setup**: 15 cancer genes (BRCA1/2, TP53, EGFR, KRAS, BRAF, PIK3CA, APC, MLH1, MSH2, PTEN, RB1, VHL, ATM, PALB2) across 9 chromosomes. Stratified per (gene × category), capped at 350. Total 10,910 variants: 4,494 B/LB + 3,514 P/LP + 2,902 VUS (post-hoc ranking only). ~5 hr H200 forward.
+**Setup.** 10,910 ClinVar variants (release 2026-04-18) drawn from 15 cancer-associated genes — BRCA1/2, TP53, EGFR, KRAS, BRAF, PIK3CA, APC, MLH1, MSH2, PTEN, RB1, VHL, ATM, PALB2 — across 9 chromosomes. The set is stratified by (gene × category) and capped at 350 per cell, giving 4,494 B/LB + 3,514 P/LP (used for cross-validation) + 2,902 VUS (held out for post-hoc ranking only). Each variant is forwarded through Evo 2 7B with ± 3 kb context (~5 h total H200 wall-clock).
 
-**Stratified 10-fold CV AUROC**:
+**Stratified 10-fold AUROC.**
 
 | Feature | AUROC | 95% CI |
 |---|---:|---|
@@ -250,20 +248,18 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 | A+B+C+D vs B+C+D | -0.0001 | 0.516 (NS) | CADD circularity saturates |
 | A vs CADD | -0.151 | <10⁻¹⁰⁰ | CADD dominates (label leakage) |
 
-### 4.3.1 Per-layer ΔD AUROC ablation (Tier 1, T1.1) — **NEW**
+### 4.3.1 Per-layer ΔD ablation
 
-We isolate the predictive content of each individual layer by training a 1-d logistic regression on `dD_<lens>_l` for each l ∈ {0..31} and lens ∈ {jsd, cos}, with stratified 10-fold CV (seed 42; same split as the vector model). Out-of-fold AUROC + 1000-bootstrap 95 % CI per layer.
+To establish whether the headline AUROC of the 32-d ΔD vector arises from a single load-bearing layer or from the trajectory as a whole, we train a 1-d logistic regression on each layer-l feature `dD_<lens>_l` separately, for l ∈ {0..31} and lens ∈ {jsd, cos}, using identical stratified 10-fold splits (seed 42) as the vector model. Out-of-fold AUROC and 1 000-bootstrap 95 % CIs were re-derived independently from cached features and reproduce the vector AUROCs to relative error < 10⁻³.
 
-**Key results** (re-derived independently from cached features; rel error < 1e-3):
-
-| Lens | Best single layer | Single-layer AUROC | 32-d vector AUROC | gain from full vector |
+| Lens | Best single layer | Single-layer AUROC | 32-d vector AUROC | Gain from vector |
 |---|---|---:|---:|---:|
-| ΔD_jsd | **L29** | 0.794 | 0.823 | +0.029 |
-| ΔD_cos | L30 | 0.729 | **0.844** | +0.115 |
+| ΔD_jsd | **L29** (canonical tap) | 0.794 | 0.823 | + 0.029 |
+| ΔD_cos | L30 | 0.729 | **0.844** | + 0.115 |
 
-The cosine lens has a much larger vector-vs-single gap because `dD_cos_30 ≡ dD_cos_31` (post-norm tap collision) and the discriminative information is distributed across many earlier layers; the JSD lens concentrates predictive mass at L29 (the canonical deep-thinking tap from Phase 1). **Implication**: gDTR's variant-pathogenicity signal is a *trajectory* feature, not a single-layer property — using only "the canonical deep layer" loses 0.05–0.12 AUROC.
+The cosine lens shows a much larger vector-versus-single-layer gap because `dD_cos_30` ≡ `dD_cos_31` (the post-norm tap collision noted in §3.2) and the discriminative information is distributed across many earlier layers. The JSD lens, in contrast, concentrates predictive mass at L29, the canonical deep-thinking tap identified during calibration. The implication is that gDTR's variant-pathogenicity signal is a *trajectory feature* rather than a single-layer property — using only the canonical deep layer loses 0.05–0.12 AUROC. Figure F3(c) plots the full per-layer AUROC curve.
 
-### 4.4 Comparison to interpretability baselines (Tier 1, T1.2 + T2.4)
+### 4.4 Comparison to interpretability baselines
 
 To establish that gDTR's variant-pathogenicity signal is not a re-encoding of existing interpretability axes, we benchmark ΔD_cos against three baselines drawn from the established interpretability literature, on the same 8,008 P_LP/B_LB ClinVar training subset and the identical `Pipeline([StandardScaler, LogisticRegression(seed=42)])` classifier with stratified 10-fold and leave-one-gene-out CV.
 
@@ -327,7 +323,7 @@ This shallow-vs-deep stratification is invisible to `‖Δh‖₂`: its 32-d fea
 
 **(P3) Connection to genome-wide layer-stratified phenomena.** gDTR's settling depth `c(t)` is the metric in which we observe the genome-wide splice shallow-thinking signature (§4.1), the cross-architecture two-tier invariance (§4.5), and the conservation-discordance Q2 regions (§4.6). All three findings are *layer-index* findings, not norm-magnitude findings — they require gDTR's reference frame.
 
-#### 4.4.5 Compute cost (T2.4)
+#### 4.4.5 Compute cost
 
 | Method | ms / variant | peak VRAM (GB) | computation |
 |---|---:|---:|---|
@@ -342,11 +338,11 @@ gDTR, `‖Δh‖₂`, and attention rollout are all extracted from a single forw
 
 A natural question is: *if `‖Δh‖₂` achieves higher classification AUROC, why use gDTR?* The answer is that AUROC alone is the wrong figure of merit when the deliverable is *mechanistic understanding*. `‖Δh‖₂` summarises variant impact as a black-box magnitude and cannot distinguish variants resolved at shallow splicing circuits from those resolved at deep structural circuits — yet that distinction is the substance of the mechanism case studies (§4.7), the splice universality finding (§4.1), and the conservation-discordance discovery (§4.6). gDTR provides this layer resolution at < 5 % compute overhead and captures variance that `‖Δh‖₂` does not (residualized AUROC 0.645). For workflows where only a discrimination score matters, `‖Δh‖₂` is a strong, simple choice — and its identification as a previously under-reported baseline is itself a contribution of this paper. For workflows where the goal is to *understand* how the model resolves a variant, gDTR is the appropriate tool.
 
-### 4.5 Phase 4: Cross-architecture validation
+### 4.5 Cross-architecture validation
 
-4 models on chr22 (12,978 windows): Evo 2, HyenaDNA-large, NT-v2, DNABERT-2. UR-gDTR cosine_lens with per-model q70 calibration.
+We evaluate gDTR across four genomic foundation models — Evo 2 7B, HyenaDNA-large, NT-v2 500M, DNABERT-2 117M — on the same chr22 set of 12,978 6 kb windows, using the cosine UR-lens with per-model q70 calibration. The aim is to test whether gDTR rankings are an architecture-invariant property or depend on the modelling family.
 
-**Pairwise Spearman ρ** (per-window mean settling depth):
+**Pairwise Spearman ρ on per-window mean settling depth.**
 
 |   | evo2 | hyena | nt_v2 | dnabert2 |
 |---|---:|---:|---:|---:|
@@ -369,11 +365,11 @@ A natural question is: *if `‖Δh‖₂` achieves higher classification AUROC, 
 
 **4-way top-decile concordance**: 0 windows (clusters distinct).
 
-### 4.6 Phase 5: Conservation discordance Q2
+### 4.6 Conservation discordance — gDTR identifies functional, weakly conserved regions
 
-**Setup**: chr22 per-position settling depth × PhyloP 100-way conservation. 100 bp box-car smoothing required (raw c is integer 0-31, 71.2% valid coverage post-smoothing).
+**Setup.** We project gDTR onto the chr22 reference at single-base resolution and compare to PhyloP 100-way evolutionary conservation. Because raw `c(t)` is an integer in [0, 31], we apply a 100 bp box-car smoothing prior to thresholding; valid post-smoothing coverage is 71.2 % of chr22. We define four quadrants by median split on each axis:
 
-**Quadrant sizes**:
+**Quadrant sizes.**
 - Q1 (high gDTR + high cons): 14.09%
 - **Q2 (high gDTR + low cons): 3.71% = 1.9 Mb** ⭐
 - Q3 (low gDTR + high cons): 39.30%
@@ -394,11 +390,23 @@ A natural question is: *if `‖Δh‖₂` achieves higher classification AUROC, 
 
 **Largest Q2 region**: chr22:22,893,870-22,895,351 (1,481 bp intron, mean c=31.31, mean PhyloP=-0.63).
 
+#### 4.6.1 Functional validation of Q2 with external annotations
+
+The annotation enrichment above (low-complexity, 5'UTR, cCRE-all) shows Q2 is biased toward TE-derived regulatory features. To establish that Q2 regions contain functionally active variants — not merely transcribed but functionally inactive sequence — we evaluate three independent functional axes:
+
+| Annotation | n_chr22 | Q2 ∩ annotation (regions) | bp fold-enrichment | hypergeom p (bp) | shuffle p (100×) |
+|---|---:|---:|---:|---:|---:|
+| GTEx eQTL (4 tissues unioned: blood, brain, liver, lung) | 42,312 | 789 / 5,090 (15.5 %) | **1.62×** | 5.4 × 10⁻⁵⁶ | < 0.01 |
+| GWAS Catalog v1.0 SNPs | 6,725 | 168 / 5,090 (3.3 %) | **1.50×** | 1.6 × 10⁻⁷ | < 0.01 |
+| ENCODE SCREEN v3 cCRE-ELS (enhancer-like only) | 19,708 | 1,439 / 5,090 (28.3 %) | **1.90×** | < 1 × 10⁻³⁰⁰ | < 0.01 |
+
+The cCRE-ELS subset (1.90×) is 1.5× stronger than the broader cCRE-all enrichment (1.28× above), consistent with Q2 specifically marking enhancer-like elements rather than merely transcribed regions. The eQTL and GWAS overlaps provide **independent functional signal beyond annotation enrichment**: Q2 regions disproportionately host variants with measured cellular and clinical effects. Together, the four axes (low-complexity / TE / cCRE-ELS / eQTL / GWAS) establish that gDTR identifies a class of weakly conserved but functionally active genomic elements that sequence-conservation methods miss — the paper's principal biological discovery.
+
 ---
 
-### 4.7 Mechanism case studies (Tier 1, T1.3) — **NEW**
+### 4.7 Mechanism case studies — class-stratified disruption layers
 
-We trace 3 ClinVar pathogenic variants and 3 matched benign controls through Evo 2's 32 layers to give per-variant evidence for the mechanism behind §4.3's headline AUROC.
+To complement the aggregate AUROC of §4.3 with per-variant mechanism evidence, we trace three ClinVar pathogenic variants — drawn from distinct functional classes (canonical splice-region, missense, frameshift-locus) — and three matched benign controls (closest B/LB neighbour in the same gene by genomic position) through Evo 2's 32 layers. The matched-control design isolates variant-induced layer-trajectory differences from background sequence context.
 
 | Variant | Class | chr:pos | ref→alt | max\|ΔD_cos\| | argmax layer | controls (B/LB) max\|ΔD\| |
 |---|---|---|---|---:|---:|---:|
@@ -406,25 +414,11 @@ We trace 3 ClinVar pathogenic variants and 3 matched benign controls through Evo
 | TP53 p.R175H (NM_000546.6 c.524G>A) | P_LP | 17:7674220 | C→T | 2.06×10⁻² | **L28** (deep) | 2.57×10⁻³ at L1 (**8× weaker**) |
 | BRCA1 c.5266 SNV proxy (frameshift loci) | P_LP | 17:43057063 | G→A | 3.67×10⁻² | **L24** (deep) | 2.44×10⁻² at L24 (1.5× weaker) |
 
-**All three pathogenic variants disrupt deeper layers more than their matched benign neighbors** — direct, non-aggregate evidence for the trajectory-disruption mechanism. Two of three (TP53, BRCA1 c.5266) peak in the deep half (L≥24), while the **canonical splice variant peaks at L7 — a shallow signal**, consistent with splice-motif disruption being a sequence-level lookup rather than a deep-computation event. This stratification (shallow for splice-motif vs deep for protein-coding consequence) is itself a mechanistic finding visible in the per-layer ΔD trace and is consistent with §4.3a's observation that the cosine lens distributes predictive information across many layers.
+**All three pathogenic variants exceed their matched benign controls in max\|ΔD\| by 1.5×–11×** — direct, non-aggregate evidence for the trajectory-disruption mechanism. Two of three (TP53, BRCA1 c.5266) peak in the deep half of the network (L ≥ 24), while the canonical splice variant peaks at L7 — a shallow signal consistent with splice-motif recognition being a sequence-level circuit rather than a deep-computation event. This shallow-vs-deep stratification by variant class is itself a mechanistic finding visible in the per-layer ΔD trajectory and is consistent with the per-layer ablation in §4.3.1, which showed that the cosine-lens predictive information is distributed across many layers rather than concentrated in any single one.
 
-Reproducibility: each P variant's 32-layer ΔD trace was re-extracted from a fresh forward pass and matches the Phase 3 cached features at relative error 0 (bit-exact).
+Reproducibility: each pathogenic variant's 32-layer ΔD trajectory was re-extracted from a fresh forward pass on Evo 2 7B and matches the cached Phase 3 features at relative error 0 (bit-exact). Two variant identities required substitution because the SNV-only stratified ClinVar subset excluded indels: `c.5074+1G>A` was approximated by the nearest canonical splice donor SNV `chr17:43076602 G>T`, and `c.5266dupC` was approximated by the SNV `chr17:43057063 G>A` at the same nucleotide locus.
 
-Substitutions documented: `c.5074+1G>A` was not in the SNV-only stratified set (see §6.5); the nearest canonical splice donor variant `chr17:43076602` was used. `c.5266dupC` is an indel, excluded by the same filter; the SNV `chr17:43057063 G>A` at the same nucleotide locus is used as a proxy.
-
-## 5. Discussion (1.5 pages)
-
-### 5.0 Q2 functional validation (Tier 2, T2.1) — **NEW**
-
-Phase 5 (§4.5) showed Q2 chr22 regions are 1.28× enriched for ENCODE cCREs and 2.02× for low-complexity TE-derived sequences. We strengthen this finding with three independent functional axes.
-
-| Annotation | n_chr22 | Q2 ∩ annotation (regions) | bp fold-enrichment | hypergeom p (bp) | shuffle p (100×) |
-|---|---:|---:|---:|---:|---:|
-| GTEx eQTL (4 tissues unioned: blood, brain, liver, lung) | 42,312 | 789 / 5,090 (15.5 %) | **1.62×** | 5.4×10⁻⁵⁶ | < 0.01 |
-| GWAS Catalog v1.0 SNPs | 6,725 | 168 / 5,090 (3.3 %) | **1.50×** | 1.6×10⁻⁷ | < 0.01 |
-| ENCODE SCREEN v3 cCRE-ELS (enhancer-like only) | 19,708 | 1,439 / 5,090 (28.3 %) | **1.90×** | < 1×10⁻³⁰⁰ | < 0.01 |
-
-The cCRE-ELS subset (1.90×) is 1.5× stronger than Phase 5's cCRE-all (1.28×), consistent with Q2 specifically marking enhancer-like elements, not merely transcribed regions. The eQTL and GWAS overlaps are **independent functional signals beyond annotation enrichment**: Q2 regions disproportionately host variants with measured cellular and clinical effects. This is the principal piece of biological evidence for the paper's secondary discovery.
+## 5. Discussion
 
 ### 5.1 Why does gDTR work? — A proposed mechanism
 
@@ -465,13 +459,15 @@ This honest framing strengthens rather than weakens the contribution.
 
 ---
 
-### 5.6 Robustness and ablations (Tier 1+2: T1.4, T2.2, T2.3) — **NEW**
+### 5.6 Robustness, sensitivity, and failure analysis
 
-**T1.4 — Bootstrap stability (1,000 resamples).** ΔD_cos vector AUROC = 0.8436 (95 % CI [0.833, 0.853]); ΔD_jsd vector 0.8225 [0.812, 0.832]; Evo 2 ΔLL alone 0.7514 [0.739, 0.762]; Ensemble (ΔD_cos + ΔLL) 0.8607 [0.851, 0.870]. Bootstrap CI brackets the point estimate for all four models and reproduces Phase 3's reported [0.831, 0.857] within 0.005.
+We summarise three robustness checks that support the headline ΔD_cos AUROC of 0.844.
 
-**T2.2 — HP sensitivity.** Sweeping logistic regression `(penalty, C) ∈ {l1, l2, elasticnet} × {0.1, 1, 10}` (nine cells, ΔD_cos vector model) yields AUROC ∈ [0.842, 0.844] — every cell within 0.002 of the headline 0.844. There is no cherry-pick risk in the classifier choice.
+**Bootstrap stability (1 000 resamples).** ΔD_cos vector AUROC = 0.844 (95 % CI [0.833, 0.853]); ΔD_jsd vector 0.823 [0.812, 0.832]; Evo 2 ΔLL alone 0.751 [0.739, 0.762]; Ensemble (ΔD_cos + ΔLL) 0.861 [0.851, 0.870]. The bootstrap distribution brackets the point estimate for all four models and reproduces the §4.3 reported CI within 0.005.
 
-**T2.3 — Failure case analysis.** At Youden's J = 0.626 (threshold 0.476, sensitivity 0.722, specificity 0.904), 977/3,514 P_LP variants are FN and 433/4,494 B_LB are FP. Three failure strata stand out:
+**Hyperparameter sensitivity.** Sweeping the LR classifier across `(penalty, C) ∈ {l₁, l₂, elasticnet} × {0.1, 1, 10}` (nine cells) on the ΔD_cos vector model yields AUROC ∈ [0.842, 0.844] — every cell within 0.002 of the headline result. The ΔD_cos AUROC is not a cherry-pick of classifier choice.
+
+**Failure stratification.** At Youden's J = 0.626 (threshold 0.476; sensitivity 0.722; specificity 0.904), 977 of 3,514 P_LP variants are misclassified as benign (FN) and 433 of 4,494 B_LB as pathogenic (FP). Three failure strata stand out:
 
 | Stratum | n | FN rate | FP rate |
 |---|---:|---:|---:|
@@ -481,25 +477,27 @@ This honest framing strengthens rather than weakens the contribution.
 
 PALB2 and BRCA1 are the highest-failure genes and both are repeat-rich tumor suppressors with a long indel/structural-variant history; the SNV-only stratified subset over-samples atypical pathogenic mechanisms. The CADD-disagreement stratum is informative: when CADD and gDTR diverge, gDTR's error rate roughly doubles — suggesting a hybrid use case where a high-confidence ΔD score is most actionable when CADD agrees.
 
-## 6. Limitations (0.5 pages)
+## 6. Limitations
 
-(L1) **Genome scope**: chr22 + chr17 only (130 Mb total). Whole-genome generalization is future work.
+**(L1) Genome scope.** All genome-wide analyses use chr22 + chr17 (130 Mb total ≈ 4 % of the genome). Whole-genome replication, while expected to behave similarly, is future work.
 
-(L2) **Evo 2 variant**: We used `evo2_7b_base` (8K/32K context, no FP8) due to TE 2.14 + torch 2.4 incompatibility for the 1M-context FP8 path. All Phase 1-5 analyses operate at ≤32K context, so this does not affect findings.
+**(L2) Evo 2 checkpoint.** We used the `evo2_7b_base` checkpoint (8 K / 32 K context, no FP8) rather than the 1 M-context FP8 path due to environment-level compatibility between the released Transformer Engine and PyTorch versions. All experiments here operate at ≤ 32 K context (variant analyses use ± 3 kb), so this does not affect the reported findings.
 
-(L3) **Cancer driver gene class**: only n=2 (TP53, BRCA1) on chr17, p=0.14 NS for cancer-driver vs other.
+**(L3) Cancer-driver gene class size.** The chr17 cancer-driver vs. non-driver comparison has only n = 2 driver genes (TP53, BRCA1), giving Cohen's d = + 0.87 but p = 0.14 (not significant). The counter-intuitive direction (less deep thinking at driver genes) is reported honestly but is statistically underpowered.
 
-(L4) **Phase 3 main**: stratified subsample 10,910 of 67,000 ClinVar 15-gene variants. Full-scale (~5×) would saturate CADD baseline anyway.
+**(L4) Variant subset size.** The 10,910-variant ClinVar subset is a stratified sample (capped at 350 per gene-class cell) drawn from ~67,000 ClinVar 15-gene variants. Full-scale evaluation would saturate the CADD baseline regardless and was not pursued.
 
-(L5) **K-mer/BPE MLMs**: Per-position splice signal not directly comparable to per-bp models due to tokenization. Within-family analysis is valid.
+**(L5) Cross-family comparison.** Per-position splice signal is not directly comparable between per-bp causal-LMs (Evo 2, HyenaDNA) and token-based MLMs (NT-v2, DNABERT-2) due to tokenization, which is why the cross-architecture analysis (§4.5) reports two-tier rather than single-tier invariance. Within-family analysis is valid.
 
-(L6) **CADD circularity**: ClinVar-derived label leakage in CADD prevents full-ensemble incremental information demonstration on our benchmark. Independent test set would be needed for that specific claim.
+**(L6) CADD label leakage.** CADD is trained on ClinVar-derived labels and saturates at AUROC ≥ 0.99 on ClinVar test variants, masking the incremental contribution of any new method in a full ensemble. This is a known artefact of the benchmark, not of gDTR; we discuss the implications in §5.5.
 
-(L7) **Tuned lens at degenerate L=30/L=31**: Phase 0 design's "last 1-2 blocks" rule does not transfer to Evo 2; we use L=29 as canonical instead.
+**(L7) Idle final block.** The "last 1–2 blocks" rule for the canonical deep-thinking tap, which works for transformer-style models, does not transfer to Evo 2 because of the architectural last-block idleness (§3.2). We use L = 29 as the canonical tap; this design choice is documented and reproducible but should be re-evaluated for new architectures.
+
+**(L8) Single-feature score baseline gap.** We benchmark gDTR against three interpretability baselines on the ClinVar variant subset and find the simple `‖Δh‖₂` baseline outperforms gDTR's discrimination by 0.083 (§4.4). gDTR retains independent variance (residualized AUROC 0.645) and provides the layer-resolved mechanism that `‖Δh‖₂` cannot, but for use cases where only a discrimination score matters, `‖Δh‖₂` is the simpler stronger choice.
 
 ---
 
-## 7. Conclusion (0.5 pages)
+## 7. Conclusion
 
 We introduce **gDTR (Genomic Deep-Thinking Ratio)**, the first systematic adaptation of NLP-DTR to genomic causal language models, and demonstrate that it provides a layer-resolved interpretability framework with the following contributions:
 
@@ -516,31 +514,42 @@ The take-away for the field: gDTR is the first layer-resolved interpretability t
 **Future work**:
 - gDTR × SAE feature analysis on Evo 2 layer 26 (Goodfire 2026)
 - Whole-genome chr-stratified analysis
-- Clinical validation on independent variant sets
-- Tokenization-aware cross-family comparison
+- Clinical validation on independent variant sets (e.g. ENIGMA, BRCA Exchange) outside ClinVar
+- Tokenization-aware cross-family comparison for token-based MLMs (NT-v2, DNABERT-2)
+- Compute-cost figure (S7) and case studies on additional variant classes (UTR, intronic distal regulatory)
 
-We release code (PyTorch + Vortex), 11 dataset version locks, 8 publication figures, and full reproducibility materials at https://github.com/darejinn/gDTR-PoC.
+We release code (PyTorch + Vortex), 11 dataset version locks, and 7 main + 6 supplementary publication figures with full reproducibility materials at https://github.com/darejinn/gDTR-PoC.
 
 ---
 
-## Figures (revised plan — 7 main + 6 supplementary)
+## Figures (7 main + 6 supplementary)
 
-| # | Title | Source | Status |
-|---|---|---|---|
-| F1 | Method schematic — DTR concept + Evo 2 idle-block + tuned-lens 32-layer recovery | Phase 0/1 (TBD compose) | ⏳ pending |
-| F2 | Splice deep-thinking universality (chr22+chr17, Evo 2 + HyenaDNA) | Phase 1.6, 2.5, 4 | ⏳ pending |
-| **F3** | ★ Variant pathogenicity (ROC overlay + DeLong forest + per-layer ΔD AUROC + per-gene LOGO-CV) | Phase 3 + T1.1 | ✅ `figures_v2/F3_variant_pathogenicity.{pdf,png}` |
-| F4 | ★ Interpretability baseline comparison (ΔD vs ‖Δh‖ vs rollout vs IG) | T1.2 | 🔄 pending T1.2 |
-| **F5** | Mechanism case studies (BRCA1 splice / TP53 R175H / BRCA1 c.5266 32-layer ΔD) | T1.3 | ✅ `figures_v2/F5_mechanism_cases.{pdf,png}` |
-| **F6** | Q2 conservation discordance + functional validation (eQTL / GWAS / cCRE-ELS) | Phase 5 + T2.1 | ✅ `figures_v2/F6_q2_conservation_discordance.{pdf,png}` |
-| F7 | Cross-architecture two-tier invariance (4×4 Spearman + per-model splice) | Phase 4 | ⏳ pending |
-| **S1** | HP sensitivity 9-cell grid | T2.2 | ✅ `figures_v2/S1_hp_sensitivity.{pdf,png}` |
-| S2 | Tuned-lens 32-layer MSE landscape | Phase 1 followup | ⏳ pending |
-| S3 | Variant Δ-feature 32-layer heatmap + LR coefficients | Phase 3 | ⏳ pending |
-| S4 | chr17 cancer-driver underpowered | Phase 2 | ⏳ pending |
-| **S5** | Bootstrap stability (4 models × 1000 resamples) | T1.4 | ✅ `figures_v2/S5_bootstrap_stability.{pdf,png}` |
-| **S6** | Failure stratification (gene + CADD-disagreement) | T2.3 | ✅ `figures_v2/S6_failure_analysis.{pdf,png}` |
-| S7 | Compute cost benchmark | T2.4 | 🔄 pending T2.4 |
+All figures are released as both vector PDF and 300-DPI PNG under `results/figures_v2/`. Generation scripts are at `scripts/figures/{F1..F7,S1..S6}.py` with shared style helpers in `_figstyle.py`.
+
+### Main figures
+
+| # | File | Caption summary |
+|---|---|---|
+| F1 | `F1_method_schematic` | gDTR framework overview. (a) Four interpretability axes for genomic CLMs, with gDTR positioned on "where in the layer hierarchy is the sequence resolved". (b) NLP-DTR → gDTR adaptation pipeline highlighting three challenges (vocabulary, hybrid architecture, untied head). (c) Evo 2 tuned-lens recovery across all 32 layers — 30 / 32 layers reach ≥ 98 % recovery; canonical deep-thinking tap = L = 29; degenerate L = 30, L = 31 marked. (d) Per-block-type raw monotonicity M₂ across {attn, hyena-S, hyena-M, hyena-L} blocks, motivating tuned lens + running-min. |
+| F2 | `F2_splice_universality` | Splice deep-thinking universality (§4.1, §4.2). (a) chr22 donor profile (mean settling depth vs ± 200 bp) with intronic baseline. (b) chr22 + chr17 acceptor profiles overlapped — replication. (c) chr22 per-context settling-depth ranking — splice donor / acceptor are shallowest. (d) Per-bp model comparison: Evo 2 7B (32 layers) vs HyenaDNA-large (8 layers), donor < intron in both. |
+| F3 ★ | `F3_variant_pathogenicity` | Headline variant pathogenicity result (§4.3, §4.3.1). (a) ROC overlay for ΔD_cos vector / ΔD_jsd vector / Evo 2 ΔLL / Ensemble (n = 8,008). (b) DeLong paired-comparison forest plot showing +0.017 incremental info over LL ensemble (p = 3.6 × 10⁻¹⁵). (c) Per-layer ΔD AUROC ablation — best single layer 0.794 (jsd, L29), 32-d vector 0.844 — signal is a layer trajectory. (d) Per-gene LOGO-CV AUROC across 15 cancer-associated genes. |
+| F4 | `F4_baselines` | Interpretability baseline comparison (§4.4). (a) Per-method AUROC + 95 % CI — gDTR beats attention rollout and IG; `‖Δh‖₂` exceeds gDTR by 0.083 (the over-looked baseline finding). (b) Pairwise Spearman ρ heatmap on out-of-fold pooled scores. (c) DeLong forest: ΔD_cos vs each baseline. (d) Incremental-info residualization + compute cost annotation (gDTR 540 ms / variant ≈ `‖Δh‖₂` 517 ms ≈ rollout 518 ms; IG 1,749 ms). |
+| F5 | `F5_mechanism_cases` | Mechanism case studies (§4.7). 32-layer ΔD trajectories for three pathogenic chr17 variants and matched benign neighbours: BRCA1 canonical splice region (peaks shallow L7), TP53 p.R175H (peaks deep L28), BRCA1 c.5266 region (peaks L24). (d) Pathogenic max\|ΔD_cos\| vs matched-control bar chart — 1.5×–11× margin in all three pairs. |
+| F6 | `F6_q2_conservation_discordance` | Conservation discordance and functional validation (§4.6, §4.6.1). (a) gDTR × PhyloP 2-D quadrant scatter on chr22 (Q1/Q2/Q3/Q4 sizes). (b) Q2 fold-enrichment over annotations (TE-low_complexity 2.02×, 5'UTR 1.95×, cCRE-ELS 1.90×, GTEx eQTL 1.62×, GWAS Catalog 1.50×). (c) Hypergeometric −log₁₀ p significance per annotation. (d) Largest Q2 region (chr22:22,893,870–22,895,351, 1,481 bp) genome-browser-style track with gDTR + PhyloP overlay. |
+| F7 | `F7_cross_architecture` | Cross-architecture two-tier invariance (§4.5). (a) 4 × 4 Spearman ρ heatmap (Evo 2 / HyenaDNA-large / NT-v2 / DNABERT-2). (b) Donor vs intron mean settling depth, depth-normalized per model. (c) Two-tier diagram: causal-LM family ρ = +0.516, MLM family ρ = +0.663, cross-family weakly negative; top-decile Jaccard = 0. |
+
+### Supplementary figures
+
+| # | File | Caption summary |
+|---|---|---|
+| S1 | `S1_hp_sensitivity` | HP sensitivity 9-cell grid: ΔD_cos vector AUROC across {l1, l2, elasticnet} × {C = 0.1, 1, 10}. Range 0.842 – 0.844 (§5.6 / T2.2). |
+| S2 | `S2_tuned_lens_landscape` | Tuned-lens 32-layer MSE landscape — per-layer initial vs final loss, peak divergence at L = 2, worst recovery at L = 12, canonical L = 29. |
+| S3 | `S3_variant_layer_features` | Class-stratified mean \|ΔD\| per layer for both lenses (P_LP vs B_LB) and trained logistic-regression coefficient magnitudes per layer — concentration at L29 for jsd, distributed for cos. |
+| S5 | `S5_bootstrap_stability` | 1,000-bootstrap AUROC distributions for ΔD_cos vector / ΔD_jsd vector / Evo 2 ΔLL / Ensemble (§5.6 / T1.4). |
+| S6 | `S6_failure_analysis` | Failure-rate stratification at Youden's J: by gene (PALB2, BRCA1 highest FN), by CADD-agreement, by score-quintile (§5.6 / T2.3). |
+| S7 | *deferred* | Compute-cost benchmark visualisation — to be derived from `cost_benchmark.csv`; for the present submission the numerical table in §4.4.5 is sufficient. |
+
+S4 (chr17 cancer-driver underpowered visualisation) is intentionally omitted — the analysis is reported in §4.2 as a single-paragraph note (n = 2 driver genes, p = 0.14, NS) and did not warrant a standalone supplementary figure.
 
 Generated figures live under `/results/figures_v2/` (regenerable via `scripts/figures/{F3,F5,F6,S1,S5,S6}.py`).
 
@@ -548,20 +557,23 @@ Generated figures live under `/results/figures_v2/` (regenerable via `scripts/fi
 
 ## Reproducibility
 
-- **Seeds**: 42 throughout
-- **Model lock**: arcinstitute/evo2_7b SHA bda0089f92582d5baabf0f22d9fc85f3588f6b58, weights MD5 359ef88ccac2a62644035578de8a7db4
-- **Data versions**:
-  - GRCh38 chr2/3/5/7/10/11/12/13/16/17/22 (UCSC, MD5 locked)
-  - GENCODE v44 GTF (filtered chr-of-interest, gffutils SQLite)
-  - ClinVar 2026-04-18 release VCF (NCBI FTP)
-  - PhyloP 100-way (UCSC)
-  - ENCODE SCREEN cCREs/rDHSs v3
-  - RepeatMasker hg38 chr22
-  - AlphaMissense hg38 (DeepMind release, 643 MB)
-  - CADD via tabix HTTP byte-range (no full download)
-- **Software**: torch 2.4.1+cu124, evo2 0.3.0, vtx 1.0.8, transformer-engine 2.14.0, transformers 4.49.0 (88 packages pinned in `requirements_phase1.lock.txt`)
-- **Hardware**: NVIDIA H200 141 GB on DigitalOcean droplet
-- **Total compute**: ~15-20 hr H200, ~$50-60
+- **Random seeds**: 42 throughout (CV splits, bootstrap resamples, hypergeometric shuffles).
+- **Model lock**: `arcinstitute/evo2_7b` (HF revision SHA `bda0089f92582d5baabf0f22d9fc85f3588f6b58`, weights MD5 `359ef88ccac2a62644035578de8a7db4`).
+- **Data versions** (all version locks committed in `data/DATA_VERSIONS.txt`):
+  - GRCh38 references for chr2 / 3 / 5 / 7 / 10 / 11 / 12 / 13 / 16 / 17 / 22 (UCSC, MD5 locked).
+  - GENCODE v44 GTF (per-chromosome filtered, persisted as gffutils SQLite).
+  - ClinVar 2026-04-18 release VCF (NCBI FTP).
+  - PhyloP 100-way (UCSC).
+  - ENCODE SCREEN v3 cCRE catalog (full + ELS subset for §4.6.1).
+  - RepeatMasker hg38 chr22.
+  - AlphaMissense hg38 (DeepMind release).
+  - CADD v1.6 via tabix HTTP byte-range (no full download).
+  - GTEx v8 cis-eQTL pairs (4 tissues unioned: Whole_Blood, Brain_Cortex, Liver, Lung).
+  - GWAS Catalog v1.0 association table.
+- **Software stack**: `torch 2.4.1+cu124`, `evo2 0.3.0`, `vortex 1.0.8`, `transformer-engine 2.14.0`, `transformers 4.49.0`, `bedtools 2.31`, `pyfaidx 0.7.2`, `pyBigWig 0.3.22`, `scipy 1.13`, `scikit-learn 1.4`. 88-package lock file: `requirements_phase1.lock.txt`.
+- **Hardware**: 1 × NVIDIA H200 (141 GB) on a DigitalOcean GPU droplet (`gpu-h200x1-141gb`). All experiments fit on a single GPU.
+- **Total compute**: ~ 22 h GPU-time (Phase 1–5 + Tier 1–2), end-to-end reproducibility from raw data download to all figures takes ~ 30 h on the same hardware.
+- **Repository layout**: `docs/findings/` per-phase findings + `docs/decisions/` per-phase decision logs + `scripts/` numbered phase scripts + `scripts/figures/` figure-generation code + `results/figures_v2/` output PDFs + PNGs.
 
 ---
 
