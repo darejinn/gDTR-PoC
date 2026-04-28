@@ -1,17 +1,8 @@
 # Genomic Deep-Thinking Ratio: A Training-Free Interpretability Framework for Genomic Causal Language Models
 
-**Manuscript Draft** — Version 3.0 (scorer + mechanistic-probe reframing), 2026-04-28
-**Headline (revised 2026-04-28 after T1.2 surprise)**: Two complementary training-free interpretability tools for genomic CLMs — `‖Δh‖₂` as a strong **scorer** (AUROC 0.926, an under-explored baseline beating published variant scores), and **gDTR** as a layer-wise **mechanistic probe** (AUROC 0.844, irreplaceable for layer-stratified mechanism: splice L7 vs missense L28).
-**Live status — what is integrated below**:
-- ✅ T1.1 per-layer ΔD AUROC ablation
-- ✅ T1.4 bootstrap stability
-- ✅ T1.3 mechanism case studies (3 P + 3 B variants)
-- ✅ T2.1 Q2 functional validation (GTEx eQTL, GWAS Catalog, cCRE-ELS)
-- ✅ T2.2 HP sensitivity
-- ✅ T2.3 failure case analysis
-- ✅ T1.2 interpretability baseline comparison
-- ✅ T2.4 compute cost benchmark
-- 🔄 §4.4 reframed (scorer + probe split) — abstract + §1.4 + §5 updated to match
+**Manuscript Draft** — Version 4.0 (gDTR-led narrative restored), 2026-04-28
+**Headline**: gDTR is a training-free, layer-wise interpretability framework for genomic CLMs that (i) achieves variant-pathogenicity AUROC 0.844 with DeLong-significant incremental information over Evo 2 likelihood (p < 10⁻⁵⁰), (ii) reveals a universal splice shallow-thinking signature across chromosomes and architectures, (iii) provides per-variant class-stratified disruption layers (splice L7 vs missense L28), and (iv) identifies functionally enriched conservation-discordant regulatory regions. We additionally identify `‖Δh‖₂` as a previously under-reported strong scoring baseline, and discuss the score-vs-mechanism trade-off explicitly.
+**Status**: All Tier 1 + Tier 2 analyses complete and integrated. Manuscript narrative re-balanced to gDTR-centric (v4.0); `‖Δh‖₂` finding retained as honest method-comparison contribution within §4.4.
 
 ---
 
@@ -27,9 +18,9 @@
 
 ---
 
-## Abstract (≈ 290 words; v3.0 — scorer + mechanistic-probe reframing)
+## Abstract (≈ 270 words; v4.0 — gDTR-led)
 
-Genomic causal language models (CLMs) such as Evo 2, trained on trillions of nucleotide tokens, achieve state-of-the-art zero-shot variant scoring and de novo sequence generation, yet their internal computational dynamics remain opaque. We approach genomic CLM interpretability with two complementary tools and report both. **First**, we systematically benchmark **per-layer hidden-state perturbation magnitude (‖Δh_l‖₂)** as a variant pathogenicity score — an under-explored baseline in genomic foundation-model variant-effect prediction. On 10,910 ClinVar variants across 15 cancer-associated genes, this 32-d feature vector achieves stratified 10-fold AUROC **0.926** (LOGO-CV 0.922), beating Evo 2 sequence likelihood (0.751) by +0.175 and established mechanistic interpretability methods (attention rollout, integrated gradients) by 0.25–0.40. **Second**, we introduce **gDTR (Genomic Deep-Thinking Ratio)**, a training-free **layer-wise mechanistic probe** adapted from the NLP Deep-Thinking Ratio of Chen et al. (2026). gDTR's per-variant signal ΔD_cos achieves AUROC 0.844 — slightly weaker than ‖Δh‖₂ at scoring, but provides three properties that the scalar magnitude cannot: (i) a layer-index reference frame for each variant's processing depth, (ii) class-stratified disruption layers (splice-region variants peak at shallow layer 7, protein-coding pathogenicity at deep layer 28), and (iii) connection to genome-wide layer-stratified phenomena. ΔD_cos retains AUROC 0.645 after residualizing on ‖Δh‖₂ — independent variance, not a re-encoding. Both tools cost ~520 ms/variant on H200 (< 5 % difference). Genome-wide analysis on chr22 + chr17 finds splice donor/acceptor sites form a universal deep-thinking signature replicating across two architecture families (Evo 2 + HyenaDNA-large). Regions of high gDTR but low PhyloP conservation (Q2, 1.9 Mb on chr22) are 1.62× enriched for GTEx eQTLs (p = 5.4 × 10⁻⁵⁶), 1.50× for GWAS Catalog SNPs, and 1.90× for ENCODE enhancer-like cCREs — independent functional evidence that gDTR identifies lineage-specific regulatory elements undetectable by sequence conservation. We release code, 11 dataset version locks, and 7 publication figures + 7 supplementary at https://github.com/darejinn/gDTR-PoC.
+Genomic causal language models (CLMs) trained on trillions of nucleotide tokens encode rich biology across regulatory grammar, splicing, and protein-level effects, yet their internal computational dynamics remain opaque. Existing interpretability tools answer *where the model attends* (attention), *what it encodes* (sparse autoencoders), or *what it predicts* (likelihood, embedding distance) — but not *where in the layer hierarchy a sequence is computationally resolved*. We introduce **gDTR (Genomic Deep-Thinking Ratio)**, a training-free **layer-wise interpretability framework** for genomic CLMs that quantifies per-token settling depth via a cosine logit-lens trajectory. gDTR is the first systematic adaptation of the NLP Deep-Thinking Ratio (Chen et al. 2026) to genomic foundation models, requiring (i) cosine-distance UR-lens calibration for small vocabularies (|V| ≤ 512), (ii) handling Evo 2's last-block idle pattern (h_30 ≡ h_31), and (iii) tuned-lens recovery at all 32 layers. Across five paper-grade experiments on Evo 2 7B, HyenaDNA-large, NT-v2, and DNABERT-2, gDTR reveals: **(i)** splice donor/acceptor sites form a **universal shallow-thinking signature** — ~3 layers below intronic baseline — replicating across chr22 + chr17 and across two architecture families; **(ii)** on 10,910 ClinVar variants across 15 cancer-associated genes, the 32-layer ΔD_cos vector scores variants at AUROC **0.844** (LOGO 0.843) and provides DeLong-significant incremental information beyond Evo 2 likelihood (ΔAUROC +0.092, p < 10⁻⁵⁰); **(iii)** mechanism case studies show class-stratified disruption — splice variants peak at shallow layer 7, protein-coding pathogenicity (TP53 p.R175H) at deep layer 28; **(iv)** chr22 regions of high gDTR but low PhyloP conservation are 1.62× enriched for GTEx eQTLs (p = 5.4 × 10⁻⁵⁶), 1.50× for GWAS SNPs, and 1.90× for ENCODE enhancer-like cCREs — model-derived discovery of lineage-specific regulatory elements. To contextualize gDTR's discrimination performance, we benchmark it against three interpretability baselines (attention rollout, integrated gradients, hidden-state perturbation magnitude `‖Δh‖₂`) — gDTR beats rollout and IG decisively (+0.17, +0.32, DeLong p < 10⁻⁵⁰), and we identify `‖Δh‖₂` as a previously **under-reported strong scoring baseline** (AUROC 0.926). gDTR captures variance that `‖Δh‖₂` cannot (residualized AUROC 0.645) and provides the layer-resolution that powers findings (i)–(iv). Code, 11 dataset version locks, and 7 + 7 publication figures: https://github.com/darejinn/gDTR-PoC.
 
 **Keywords**: genomic foundation models, mechanistic interpretability, variant pathogenicity, splice site recognition, conservation discordance, layer-wise convergence
 
@@ -61,24 +52,21 @@ Transferring DTR to genomic CLMs faces three challenges:
 
 (C3) **Untied lm_head dynamics**: HyenaDNA's last block (L7→L8) shows a >5× residual update magnitude, violating standard logit-lens monotonicity. Tuned lens (Belrose et al., 2023) is required.
 
-### 1.4 Contributions (v3.0 — scorer + mechanistic-probe two-tool reframing)
+### 1.4 Contributions (v4.0 — gDTR-led)
 
-We present **two complementary training-free interpretability tools** for genomic CLMs and report both:
+We present **gDTR (Genomic Deep-Thinking Ratio)**, the first systematic adaptation of NLP-DTR (Chen et al. 2026) to genomic causal language models. gDTR is a training-free, layer-wise interpretability framework that quantifies per-token *settling depth* — the layer index at which intermediate residual-stream predictions converge to within ε of the final layer. The framework requires three architecture-aware adaptations from NLP-DTR (small vocabulary calibration, Evo 2 last-block idleness, tuned-lens recovery at all 32 layers; details in §3) and produces a per-variant 32-d feature vector ΔD that we use throughout the paper as both a *quantitative pathogenicity score* and a *mechanistic readout*.
 
-**★★ Contribution 1 (scorer) — `‖Δh‖₂`, an under-explored baseline that beats published variant scores.** We systematically benchmark per-layer hidden-state perturbation magnitude as a 32-d feature for ClinVar variant pathogenicity. On 10,910 variants across 15 cancer-associated genes, ‖Δh‖₂ achieves stratified 10-fold AUROC **0.926** (LOGO 0.922), beating (i) Evo 2 sequence likelihood by +0.175 (Phase 3 baseline 0.751), (ii) attention rollout by +0.254, (iii) integrated gradients by +0.399. To our knowledge this is the **first systematic single-feature benchmark of `‖Δh‖₂` per layer in genomic foundation-model variant scoring**. The result identifies a **method-comparison gap** in the variant-effect-prediction literature, which has historically benchmarked likelihood-based and structure-based scores but not hidden-state-perturbation scores.
+**★ Headline finding — gDTR enables variant pathogenicity prediction with mechanistic explanation.** On 10,910 ClinVar variants across 15 cancer-associated genes, the 32-layer ΔD_cos vector achieves stratified 10-fold AUROC **0.844** (1 000-bootstrap CI 0.831–0.857), leave-one-gene-out AUROC 0.843, and provides **DeLong-significant incremental information beyond Evo 2's own likelihood** (ΔAUROC = +0.092, p < 10⁻⁵⁰). The 9-cell hyperparameter sweep deviates by ≤ 0.002 AUROC. *Critically*, the same 32-d feature vector that produces this score is also a mechanistically interpretable layer-trajectory: per-layer ablation shows the best single layer attains only AUROC 0.794 (the canonical deep-thinking tap L = 29), and the 32-d vector adds 0.05–0.12 over any single layer — the predictive signal is a *layer-trajectory* property, not a single-layer property.
 
-**★★ Contribution 2 (mechanistic probe) — gDTR, a layer-wise interpretability framework.** Adapting the NLP Deep-Thinking Ratio of Chen et al. (2026), we introduce **gDTR (Genomic Deep-Thinking Ratio)** as a training-free per-layer convergence-trajectory metric for genomic CLMs. Its variant-perturbation signal ΔD_cos achieves AUROC 0.844 (LOGO 0.843) — slightly weaker than ‖Δh‖₂ at raw scoring but provides three irreducible mechanistic properties: **(P1)** a layer-index reference frame for each variant's processing depth; **(P2)** class-stratified disruption layers (splice variants peak at shallow layer 7, protein-coding pathogenicity at deep layer 28); **(P3)** connection to genome-wide layer-stratified phenomena. ΔD_cos retains AUROC **0.645** after residualizing on ‖Δh‖₂ — independent variance, not a re-encoding.
+**Supporting finding 1 — Splice deep-thinking universality.** chr22 (12,978 windows) and chr17 (27,586 windows) genome-wide 6 kb sliding analysis reveals splice donor/acceptor sites have ~3 layers lower mean settling depth than intronic baseline. The signal replicates across chromosomes and across two architecture families (Evo 2, HyenaDNA-large), establishing that splice-grammar resolution is a *shallow-layer* circuit in genomic CLMs.
 
-**The two tools are complementary**: ‖Δh‖₂ answers "*how much* did this variant disturb the model" with the strongest score; gDTR answers "*where in the computational hierarchy* and *how does it relate to known biology*" with the only available mechanistic readout. Both run from a single forward pass at <5 % wall-clock difference (517 vs 540 ms/variant on H200).
+**Supporting finding 2 — Class-stratified disruption mechanism.** Three pathogenic chr17 variants traced through Evo 2's 32 layers exhibit different ΔD signatures by class: a BRCA1 canonical splice-region variant peaks at **shallow layer 7** (sequence-level motif lookup), TP53 p.R175H peaks at **deep layer 28** (structural-effect processing), and a BRCA1 frameshift-locus SNV peaks at **layer 24**. All three pathogenic max|ΔD_cos| exceed their matched benign neighbours by 1.5×–11×. This per-variant *layer profile* is gDTR's signature contribution and cannot be obtained from any single-scalar score.
 
-**Supporting findings (enabled by gDTR):**
+**Supporting finding 3 — Q2 conservation discordance with functional validation.** chr22 regions with high gDTR but low PhyloP conservation (5,090 regions, 1.9 Mb, 3.71 % of chr22) are enriched **1.62× for GTEx eQTLs** (p = 5.4 × 10⁻⁵⁶), **1.50× for GWAS Catalog SNPs** (p = 1.6 × 10⁻⁷), and **1.90× for ENCODE enhancer-like cCREs** (p < 10⁻³⁰⁰). These three independent functional axes go beyond annotation enrichment and identify model-derived candidate regulatory elements that sequence-conservation-based methods miss.
 
-- **(i) Splice deep-thinking universality.** chr22 + chr17 genome-wide 6 kb windows reveal splice donor/acceptor sites have ~ 3 layers lower mean settling depth than intronic baseline. Signal replicates across chromosomes and across two architecture families (Evo 2, HyenaDNA-large).
-- **(ii) Mechanism case studies.** Three pathogenic chr17 variants traced through Evo 2's 32 layers exhibit class-stratified ΔD signatures (splice L7, missense L28, frameshift-region L24); all three pathogenic max|ΔD_cos| exceed matched benign neighbours by 1.5×–11×.
-- **(iii) Q2 conservation discordance with functional validation.** chr22 regions with high gDTR but low PhyloP conservation (1.9 Mb, 3.71 %) are enriched 1.62× for GTEx eQTLs (p = 5.4 × 10⁻⁵⁶), 1.50× for GWAS Catalog SNPs (p = 1.6 × 10⁻⁷), 1.90× for ENCODE enhancer-like cCREs (p < 10⁻³⁰⁰) — independent functional evidence that gDTR identifies lineage-specific regulatory elements undetectable by sequence conservation.
-- **(iv) Two-tier architecture invariance.** Per-window settling-depth rankings show Spearman ρ ≥ 0.52 within causal-LM family and ρ ≥ 0.66 within MLM family, weakly negative across families — refining the "universal" claim to a tokenization-dependent two-tier story.
+**Supporting finding 4 — Two-tier architecture invariance.** Per-window settling-depth rankings show Spearman ρ ≥ 0.52 within causal-LM family (Evo 2 + HyenaDNA-large) and ρ ≥ 0.66 within MLM family (NT-v2 + DNABERT-2), but weakly negative across families — refining the "universal" interpretability claim to a tokenization-dependent two-tier story.
 
-**Methodological notes.** Adapting NLP-DTR required (a) cosine-distance UR lens with q70 calibration (γ_cos = 0.40, ρ = 0.80) for vocab |V| ≤ 512, (b) handling Evo 2's last-block idle pattern (h_30 ≡ h_31, opposite of HyenaDNA's L7 alignment spike), and (c) tuned-lens recovery at all 32 layers (30/32 ≥ 98 %). Canonical deep-thinking tap = L = 29.
+**Methodological / benchmarking contribution — comparison to interpretability baselines.** To contextualize gDTR's quantitative discrimination, we benchmark it against three established interpretability axes on the same 8,008 P_LP/B_LB ClinVar subset: (a) attention rollout (Abnar & Zuidema 2020), (b) integrated gradients on h_29, and (c) per-layer hidden-state perturbation magnitude `‖Δh‖₂`. **gDTR beats rollout (+0.172) and IG (+0.316) decisively** (DeLong p < 10⁻⁵⁰). The simple `‖Δh‖₂` baseline achieves AUROC 0.926, **outperforming gDTR's discrimination by 0.083** but providing only black-box scalar magnitudes per layer — no layer-index reference, no class-stratified mechanism, no link to genome-wide phenomena. We report this finding honestly because (1) it highlights `‖Δh‖₂` as a previously under-reported strong baseline that future variant-scoring work should include, and (2) it makes explicit the trade-off between *raw discrimination* and *mechanistic resolution* that motivates gDTR as the layer-resolved tool. ΔD_cos retains AUROC 0.645 after residualizing on `‖Δh‖₂` — independent variance, not a re-encoding (§4.4 details). Both methods run from a single forward pass at < 5 % wall-clock difference (517 vs 540 ms/variant on H200).
 
 We release code (PyTorch + Vortex), 11 dataset version locks, 7 main + 7 supplementary publication figures at https://github.com/darejinn/gDTR-PoC.
 
@@ -262,7 +250,7 @@ For comparing nested model AUROC (e.g., A+B vs A), we compute DeLong statistic o
 | A+B+C+D vs B+C+D | -0.0001 | 0.516 (NS) | CADD circularity saturates |
 | A vs CADD | -0.151 | <10⁻¹⁰⁰ | CADD dominates (label leakage) |
 
-### 4.3a Per-layer ΔD AUROC ablation (Tier 1, T1.1) — **NEW**
+### 4.3.1 Per-layer ΔD AUROC ablation (Tier 1, T1.1) — **NEW**
 
 We isolate the predictive content of each individual layer by training a 1-d logistic regression on `dD_<lens>_l` for each l ∈ {0..31} and lens ∈ {jsd, cos}, with stratified 10-fold CV (seed 42; same split as the vector model). Out-of-fold AUROC + 1000-bootstrap 95 % CI per layer.
 
@@ -275,103 +263,86 @@ We isolate the predictive content of each individual layer by training a 1-d log
 
 The cosine lens has a much larger vector-vs-single gap because `dD_cos_30 ≡ dD_cos_31` (post-norm tap collision) and the discriminative information is distributed across many earlier layers; the JSD lens concentrates predictive mass at L29 (the canonical deep-thinking tap from Phase 1). **Implication**: gDTR's variant-pathogenicity signal is a *trajectory* feature, not a single-layer property — using only "the canonical deep layer" loses 0.05–0.12 AUROC.
 
-### 4.4 Two complementary tools — scorer vs. mechanistic probe (Tier 1, T1.2 + T2.4)
+### 4.4 Comparison to interpretability baselines (Tier 1, T1.2 + T2.4)
 
-Our T1.2 comparison reveals a surprise that **reframes the paper's contribution structure**: a simpler interpretability baseline beats ΔD_cos at raw classification, but only ΔD_cos provides layer-resolved mechanistic insight. We treat these as **two complementary tools answering different questions**, not as competitors:
+To establish that gDTR's variant-pathogenicity signal is not a re-encoding of existing interpretability axes, we benchmark ΔD_cos against three baselines drawn from the established interpretability literature, on the same 8,008 P_LP/B_LB ClinVar training subset and the identical `Pipeline([StandardScaler, LogisticRegression(seed=42)])` classifier with stratified 10-fold and leave-one-gene-out CV.
 
-> **Scorer** ("how *much* did this variant disturb the model?") — answered by **‖Δh‖₂**, a 32-d vector of per-layer hidden-state perturbation magnitudes. Strong, simple, but a black box.
->
-> **Mechanistic probe** ("*where in the computational hierarchy* is this variant resolved, and *how does it relate to known biology*?") — answered by **gDTR / ΔD_cos**, the layer-wise convergence-trajectory metric. Slightly weaker as a raw score, but provides per-layer interpretable structure.
+#### 4.4.1 Methods compared
 
-We split §4.4 accordingly: §4.4.1–4.4.3 cover *scoring* (where ‖Δh‖₂ is the new headline); §4.4.4 covers *mechanism* (where gDTR is irreplaceable).
+- **(A) ΔD_cos (gDTR, this work)** — per-layer cosine UR-lens distance change at the variant token: `ΔD_cos[l] = D_cos_alt[l] − D_cos_ref[l]` where `D_cos[l] = 1 − cos(h_l, h_norm)`. 32-d vector.
+- **(B) attention rollout** (Abnar & Zuidema 2020) — canonical mechanistic-interpretability baseline. 5-d vector (Evo 2 attention block indices {3, 10, 17, 24, 31}).
+- **(C) Integrated gradients on `‖h_29‖₂`** (Sundararajan et al. 2017) — gradient-based attribution baseline. 1-d scalar (8-step left-Riemann; T = 1,000 context).
+- **(D) `‖Δh_l‖₂`** — per-layer Euclidean norm of hidden-state change at the variant token: `‖h_l_alt[var_pos] − h_l_ref[var_pos]‖₂`. 32-d vector. We include this method as a "minimal" interpretability baseline — it captures the magnitude of variant-induced hidden-state perturbation but discards directional and layer-relative information. The metric is conceptually adjacent to out-of-distribution detection literature (Lee et al. 2018) and activation-patching circuit analysis (Meng et al. 2022) but, to our knowledge, **has not been systematically benchmarked as a single-feature variant pathogenicity score in published genomic foundation-model evaluations** — variant-effect-prediction work has historically used likelihood scores, structure-derived predictors (AlphaMissense), or aggregate ensembles (CADD).
 
-#### Method definitions
-
-We compare four methods on the same 10,910 ClinVar variants and 8,008 P_LP/B_LB training subset:
-
-- **(A) ΔD_cos (gDTR)** — per-layer cosine UR-lens distance change at the variant token: `ΔD_cos[l] = D_cos_alt[l] − D_cos_ref[l]` where `D_cos[l] = 1 − cos(h_l, h_norm)`. 32-d vector.
-- **(B) ‖Δh_l‖₂** — per-layer Euclidean norm of hidden-state change at the variant token: `||h_l_alt[var_pos] − h_l_ref[var_pos]||_2`. 32-d vector. Conceptually adjacent to OOD-detection / activation-patching literature, but **under-explored as a published baseline in genomic FM variant scoring** — most prior work compares against likelihood scores (Evo 2 ΔLL, ESM marginals), AlphaMissense, or CADD.
-- **(C) attention rollout** (Abnar & Zuidema 2020). 5-d vector (Evo 2 attention block indices {3, 10, 17, 24, 31}). Canonical mechanistic-interpretability baseline.
-- **(D) Integrated gradients on ‖h_29‖₂** (Sundararajan et al. 2017; 8-step left-Riemann; T = 1,000 context). 1-d scalar. Gradient-based attribution baseline.
-
-All four feed an **identical** `Pipeline([StandardScaler, LogisticRegression(seed=42)])` with stratified 10-fold CV and leave-one-gene-out CV (LOGO).
-
----
-
-### Part 1 — Variant scoring (‖Δh‖₂ is the new headline)
-
-#### 4.4.1 Per-method AUROC
+#### 4.4.2 gDTR beats classical mechanistic interpretability methods
 
 | Method | dim | Stratified 10-fold AUROC | LOGO-CV AUROC |
 |---|---:|---|---|
-| **(B) ‖Δh‖₂** ⭐ new headline | 32 | **0.926 [0.921, 0.932]** | **0.922 [0.903, 0.942]** |
-| (A) ΔD_cos (gDTR) | 32 | 0.844 [0.831, 0.857] | 0.843 [0.811, 0.876] |
-| (C) attention rollout | 5 | 0.672 [0.660, 0.684] | 0.668 [0.635, 0.701] |
-| (D) Integrated gradients | 1 | 0.527 [0.515, 0.540] | 0.524 [0.497, 0.551] |
+| **(A) ΔD_cos (gDTR, this work)** | 32 | **0.844** [0.831, 0.857] | **0.843** [0.811, 0.876] |
+| (B) attention rollout | 5 | 0.672 [0.660, 0.684] | 0.668 [0.635, 0.701] |
+| (C) integrated gradients | 1 | 0.527 [0.515, 0.540] | 0.524 [0.497, 0.551] |
+| (D) `‖Δh‖₂` | 32 | 0.926 [0.921, 0.932] | 0.922 [0.903, 0.942] |
 
-#### 4.4.2 DeLong paired tests (n = 8,008)
+DeLong paired tests on out-of-fold pooled scores (n = 8,008):
 
 | Comparison | ΔAUROC | z | p-value |
 |---|---:|---:|---:|
-| ΔD_cos vs ‖Δh‖₂ | **−0.083** | −16.72 | < 1×10⁻⁵⁰ |
-| ΔD_cos vs attn rollout | +0.172 | +23.47 | < 1×10⁻⁵⁰ |
-| ΔD_cos vs IG | +0.316 | +39.99 | < 1×10⁻⁵⁰ |
+| ΔD_cos vs attention rollout | **+0.172** | +23.47 | < 10⁻⁵⁰ |
+| ΔD_cos vs integrated gradients | **+0.316** | +39.99 | < 10⁻⁵⁰ |
+| ΔD_cos vs `‖Δh‖₂` | −0.083 | −16.72 | < 10⁻⁵⁰ |
 
-#### 4.4.3 Pairwise concordance (Spearman ρ on out-of-fold pooled scores)
+**gDTR beats the two canonical mechanistic interpretability methods decisively.** The +0.172 margin over attention rollout and +0.316 over integrated gradients (both DeLong p < 10⁻⁵⁰) confirm that gDTR's layer-trajectory signal is not a re-encoding of attention re-routing nor of gradient attribution. Together with §4.3's headline +0.092 over Evo 2 own likelihood (DeLong p < 10⁻⁵⁰; +0.017 over ensemble, p = 3.6 × 10⁻¹⁵), this establishes gDTR's discrimination as superior to all three previously-published interpretability axes for variant pathogenicity.
 
-|              | A ΔD_cos | B ‖Δh‖ | C rollout | D IG |
+#### 4.4.3 An overlooked strong baseline: `‖Δh‖₂`
+
+The simple `‖Δh‖₂` baseline achieves AUROC 0.926, exceeding gDTR by 0.083 (DeLong p < 10⁻⁵⁰). We report this finding honestly and contextualize it carefully:
+
+1. **The result is empirically novel.** No prior published genomic-FM variant-effect-prediction evaluation we are aware of includes per-layer hidden-state perturbation magnitude as a single-feature baseline. Variant-scoring papers (Evo 2 likelihood, ESM-1v, AlphaMissense, CADD) compare against output-side or structure-side scores, not hidden-state-perturbation scores. We therefore identify `‖Δh‖₂` as **a previously under-reported strong baseline that future genomic-FM variant-scoring work should include**.
+
+2. **`‖Δh‖₂` is a black-box scalar per layer.** It tells us *how much* a variant perturbed each layer's representation but says nothing about *what computation* that layer performs, *which biological mechanism* is engaged, or *where in the model's processing hierarchy* the variant takes effect. The score-vs-mechanism trade-off this implies is the central topic of §4.4.4.
+
+3. **gDTR captures variance that `‖Δh‖₂` does not.** The two methods correlate at Spearman ρ = 0.57 (out-of-fold pooled scores), and residualizing ΔD_cos on `‖Δh‖₂` (linear regression `s_A = β₀ + β₁ s_D + ε`, residuals re-evaluated for AUROC) yields AUROC **0.645** — substantially above 0.5, indicating gDTR encodes information orthogonal to mere perturbation magnitude. This residual variance is what enables the mechanistic findings in §4.4.4 and §§4.6, 5.0, 5.1.
+
+Pairwise Spearman ρ on out-of-fold pooled scores:
+
+|              | ΔD_cos | rollout | IG | `‖Δh‖₂` |
 |---|---:|---:|---:|---:|
-| **A ΔD_cos**   | 1.000 | +0.57 | +0.30 | +0.08 |
-| B ‖Δh‖        |        | 1.000  | +0.31 | +0.05 |
-| C rollout      |        |        | 1.000  | +0.01 |
-| D IG           |        |        |        | 1.000 |
-
-**Reading of Part 1**:
-1. **‖Δh‖₂ is the strongest single feature** — it beats the canonical Evo 2 ΔLL baseline (Phase 3 AUROC 0.751) by +0.175 and the established interpretability methods (rollout, IG) by 0.25–0.40. To our knowledge, this is the **first systematic benchmark** of `‖Δh‖₂` per layer as a single-feature variant score in genomic foundation models, and it identifies an under-explored signal in the variant-effect-prediction literature.
-2. **ΔD_cos still beats two of three baselines** decisively (rollout +0.17, IG +0.32, both DeLong p < 10⁻⁵⁰), and ΔD_cos beats Evo 2 ΔLL by +0.092 (Phase 3 §4.3, DeLong p = 3.6 × 10⁻¹⁵).
-3. **‖Δh‖₂ and ΔD_cos are correlated but not redundant** (ρ = 0.57). Residualizing ΔD_cos on ‖Δh‖₂ leaves AUROC = 0.645 — i.e., ΔD captures unique variance beyond mere magnitude. This unique component is what enables the mechanistic readout in Part 2.
-
----
-
-### Part 2 — Mechanistic interpretation (gDTR is irreplaceable)
-
-‖Δh‖₂ wins at scoring but is a **black-box scalar per layer**: it tells you *that* layer 24 was perturbed but says nothing about *what computation* is happening at layer 24, *which biological mechanism* is engaged, or *where in the model's processing hierarchy* the variant takes effect. ΔD_cos retains this information through three properties that ‖Δh‖₂ cannot provide:
+| **ΔD_cos**   | 1.000 | +0.30 | +0.08 | +0.57 |
+| rollout       |       | 1.000 | +0.01 | +0.31 |
+| IG            |       |       | 1.000 | +0.05 |
+| `‖Δh‖₂`       |       |       |       | 1.000 |
 
 #### 4.4.4 Mechanistic resolution unique to gDTR
 
-**(P1) Reference frame to interpret each layer's signal.** gDTR's per-layer settling-depth `c(t)` is a *layer index*, not just a magnitude — it tells us *when in the residual-stream computation* the model has converged on its prediction for token *t*. ‖Δh‖ has no such reference; it cannot distinguish a 0.1-norm shift at layer 5 (shallow motif disruption) from a 0.1-norm shift at layer 28 (deep semantic processing). gDTR can.
+`‖Δh‖₂` and ΔD_cos provide complementary readouts: the former is a *magnitude* per layer, the latter is a *layer-resolved trajectory of computational convergence*. Three properties of gDTR are inaccessible to a magnitude-only baseline:
 
-**(P2) Class-stratified disruption layers.** The mechanism case studies (§4.6) show this concretely:
+**(P1) Layer-index reference frame.** gDTR's per-layer settling-depth `c(t)` is a *layer index*, not a magnitude. It quantifies *when* in the 32-layer residual-stream computation the model has converged on its prediction at token `t`. `‖Δh‖₂` has no such reference; a 0.1 norm shift at layer 5 (shallow motif circuit) and at layer 28 (deep structural circuit) are indistinguishable in its feature vector.
+
+**(P2) Class-stratified disruption layers.** The mechanism case studies (§4.7) show layer-stratification by variant class:
 - BRCA1 canonical splice-region variant (chr17:43076602 G→T): ΔD peaks at **shallow layer 7** — splice motif lookup is a sequence-level circuit.
-- TP53 p.R175H missense (chr17:7674220 C→T): ΔD peaks at **deep layer 28** — protein structural-effect processing engages late layers.
-- BRCA1 c.5266 region (chr17:43057063 G→A): ΔD peaks at **deep layer 24** — frameshift consequence integrates across deeper context.
+- TP53 p.R175H missense (chr17:7674220 C→T): ΔD peaks at **deep layer 28** — structural-effect processing engages late layers.
+- BRCA1 c.5266 region (chr17:43057063 G→A): ΔD peaks at **layer 24** — frameshift consequence integrates across deeper context.
 
-This shallow-vs-deep stratification is **invisible to ‖Δh‖₂** by construction — its 32-d feature vector contains only norm magnitudes, and the LR weights it learns are not interpretable as "variant *type* localizers" because the magnitudes mix multiple sources of variance (motif, conservation, GC-content, etc.).
+This shallow-vs-deep stratification is invisible to `‖Δh‖₂`: its 32-d feature vector contains only norm magnitudes, and the LR weights it learns mix multiple sources of variance (motif, conservation, GC content) without per-layer interpretive meaning.
 
-**(P3) Connection to biological universality.** The genome-wide splice deep-thinking signature (§4.1) — donor and acceptor sites have ~3 layers lower mean settling depth than intronic baseline, replicating across chr22, chr17, and across two architecture families — is a **gDTR finding**, not a hidden-state-norm finding. Settling depth `c(t)` is a layer index that maps onto a biological grammar (splice processing happens at shallow layers in genomic CLMs); norm magnitude does not.
+**(P3) Connection to genome-wide layer-stratified phenomena.** gDTR's settling depth `c(t)` is the metric in which we observe the genome-wide splice shallow-thinking signature (§4.1), the cross-architecture two-tier invariance (§4.5), and the conservation-discordance Q2 regions (§4.6). All three findings are *layer-index* findings, not norm-magnitude findings — they require gDTR's reference frame.
 
-#### 4.4.5 Compute cost (T2.4) — both tools are forward-only
+#### 4.4.5 Compute cost (T2.4)
 
-| Method | ms / variant | peak VRAM (GB) | scaling |
+| Method | ms / variant | peak VRAM (GB) | computation |
 |---|---:|---:|---|
-| (A) ΔD_cos (gDTR) | 540.1 | 16.74 | linear |
-| (B) ‖Δh‖₂ | 517.1 | 16.74 | linear |
-| (C) attention rollout | 518.0 | 15.96 | linear |
-| (D) IG (8-step) | 1749.3 | 20.16 | 8× backward |
+| ΔD_cos (gDTR) | 540.1 | 16.74 | 1× forward |
+| `‖Δh‖₂` | 517.1 | 16.74 | 1× forward |
+| attention rollout | 518.0 | 15.96 | 1× forward |
+| integrated gradients | 1,749.3 | 20.16 | 8× backward |
 
-ΔD_cos and ‖Δh‖₂ are **operationally interchangeable** at runtime — both extracted from a single forward pass with negligible (<5 %) overhead difference. *Choosing gDTR over ‖Δh‖ trades 4 % wall-clock for the mechanistic resolution properties P1–P3.* IG is 3.2× slower because of 8 backward passes per variant.
+gDTR, `‖Δh‖₂`, and attention rollout are all extracted from a single forward pass with comparable wall-clock (~520 ms / variant on H200, < 5 % spread). Integrated gradients is 3.2× slower because each variant requires 8 backward passes. **Choosing gDTR over `‖Δh‖₂` costs 4 % wall-clock for the mechanistic resolution properties P1–P3.**
 
----
+#### 4.4.6 The score-vs-mechanism trade-off
 
-#### 4.4.6 Anticipated reviewer objection — why not just use ‖Δh‖₂?
+A natural question is: *if `‖Δh‖₂` achieves higher classification AUROC, why use gDTR?* The answer is that AUROC alone is the wrong figure of merit when the deliverable is *mechanistic understanding*. `‖Δh‖₂` summarises variant impact as a black-box magnitude and cannot distinguish variants resolved at shallow splicing circuits from those resolved at deep structural circuits — yet that distinction is the substance of the mechanism case studies (§4.7), the splice universality finding (§4.1), and the conservation-discordance discovery (§4.6). gDTR provides this layer resolution at < 5 % compute overhead and captures variance that `‖Δh‖₂` does not (residualized AUROC 0.645). For workflows where only a discrimination score matters, `‖Δh‖₂` is a strong, simple choice — and its identification as a previously under-reported baseline is itself a contribution of this paper. For workflows where the goal is to *understand* how the model resolves a variant, gDTR is the appropriate tool.
 
-> *"If ‖Δh‖₂ achieves higher AUROC, why is gDTR needed?"*
-
-**Answer.** ‖Δh‖₂ achieves higher classification AUROC but provides *no mechanistic resolution* — it cannot distinguish whether a variant's effect is mediated by a shallow splicing circuit (layer 7) or by deep structural processing (layer 28), and it does not connect to the genome-wide layer-stratified phenomena we report in §4.1 (splice universality), §4.6 (case studies), and §5.2–5.3 (Q2 conservation discordance). gDTR's layer-wise trajectory provides this resolution at **comparable compute cost** (517 ms for ‖Δh‖ vs 540 ms for gDTR per variant on H200, < 5 % overhead) and reveals **unique variance** (residualized AUROC 0.645) that ‖Δh‖₂ does not capture. The two tools answer different questions and the paper reports both honestly.
-
-This pre-empts the obvious "Occam's razor — pick the higher-AUROC scalar" critique. The argument is that *AUROC alone is the wrong figure of merit when the deliverable is mechanistic understanding* — a familiar tension in interpretability research at large.
-
-### 4.4 Phase 4: Cross-architecture validation
+### 4.5 Phase 4: Cross-architecture validation
 
 4 models on chr22 (12,978 windows): Evo 2, HyenaDNA-large, NT-v2, DNABERT-2. UR-gDTR cosine_lens with per-model q70 calibration.
 
@@ -398,7 +369,7 @@ This pre-empts the obvious "Occam's razor — pick the higher-AUROC scalar" crit
 
 **4-way top-decile concordance**: 0 windows (clusters distinct).
 
-### 4.5 Phase 5: Conservation discordance Q2
+### 4.6 Phase 5: Conservation discordance Q2
 
 **Setup**: chr22 per-position settling depth × PhyloP 100-way conservation. 100 bp box-car smoothing required (raw c is integer 0-31, 71.2% valid coverage post-smoothing).
 
@@ -425,7 +396,7 @@ This pre-empts the obvious "Occam's razor — pick the higher-AUROC scalar" crit
 
 ---
 
-### 4.6 Mechanism case studies (Tier 1, T1.3) — **NEW**
+### 4.7 Mechanism case studies (Tier 1, T1.3) — **NEW**
 
 We trace 3 ClinVar pathogenic variants and 3 matched benign controls through Evo 2's 32 layers to give per-variant evidence for the mechanism behind §4.3's headline AUROC.
 
@@ -455,24 +426,18 @@ Phase 5 (§4.5) showed Q2 chr22 regions are 1.28× enriched for ENCODE cCREs and
 
 The cCRE-ELS subset (1.90×) is 1.5× stronger than Phase 5's cCRE-all (1.28×), consistent with Q2 specifically marking enhancer-like elements, not merely transcribed regions. The eQTL and GWAS overlaps are **independent functional signals beyond annotation enrichment**: Q2 regions disproportionately host variants with measured cellular and clinical effects. This is the principal piece of biological evidence for the paper's secondary discovery.
 
-### 5.1 Why does gDTR work as a mechanistic probe? — A proposed mechanism
+### 5.1 Why does gDTR work? — A proposed mechanism
 
-gDTR captures **where, in layer-wise computation, a variant disrupts the model's processing trajectory** — a layer-resolved readout that the simpler `‖Δh‖₂` scorer cannot provide.
+gDTR captures *where, in layer-wise computation, a variant disrupts the model's processing trajectory*. For a causal genomic CLM, the residual stream at any token integrates information from all preceding tokens through the layer hierarchy: shallow layers are dominated by local sequence-motif circuits (splice donor/acceptor recognition, codon boundaries), and deeper layers integrate broader context for structural and regulatory predictions. The settling-depth metric `c(t)` indexes the layer at which intermediate predictions converge — a quantity that maps directly onto which biological circuit was engaged.
 
-For example:
-- A pathogenic missense in a splice region may not change overall sequence likelihood much (if variant tokens are locally common), but disrupts the *shallow* computation needed for splice motif recognition → high ΔD at L5–L8 (consistent with case study §4.6 BRCA1 splice variant peaking at L7).
-- A pathogenic missense in a coding region (TP53 p.R175H) may slightly shift likelihood but disrupts the *deep* computation needed for protein structural-effect prediction → high ΔD at L24–L28 (consistent with case study peak at L28).
-- A benign synonymous variant typically perturbs neither shallow motif circuits nor deep structural processing → low ΔD across all layers.
+This mechanistic interpretation is empirically supported by four convergent lines of evidence:
 
-This proposed mechanism is supported by:
-- **DeLong-significant incremental information over Evo 2's own likelihood** (ΔAUROC +0.092, p < 10⁻⁵⁰; or +0.017 over the LL ensemble baseline, p = 3.6 × 10⁻¹⁵).
-- **Class-stratified case studies (§4.6)**: pathogenic splice → shallow disruption; pathogenic missense → deep disruption.
-- **Genome-wide replication (§4.1)**: splice donor/acceptor sites form a universal shallow-thinking signature across chr22, chr17, and two architecture families.
-- **Independent variance from `‖Δh‖₂`**: residualizing ΔD on `‖Δh‖₂` retains AUROC 0.645 — i.e., gDTR captures *which layer* the perturbation matters, not just *how much* perturbation occurred.
+- **(M1) Per-variant case-study layer profiles (§4.7).** Pathogenic splice-region variants peak at shallow layers (e.g., BRCA1 chr17:43076602 G→T at L7), pathogenic missense at deep layers (e.g., TP53 p.R175H at L28), and frameshift-region SNVs at intermediate-to-deep layers (e.g., BRCA1 chr17:43057063 G→A at L24). All three pathogenic variants show 1.5×–11× larger max|ΔD| than matched benign neighbours, replicated bit-for-bit against Phase 3 cached features (rel. error = 0).
+- **(M2) Genome-wide layer signature (§4.1, §4.2).** Splice donor and acceptor sites have ~3 layers lower mean settling depth than intronic baseline, replicating across chr22 + chr17 and across two architecture families (Evo 2 + HyenaDNA-large). Splice grammar resolution is therefore a *shallow* circuit in genomic CLMs, consistent with M1.
+- **(M3) DeLong-significant incremental information beyond likelihood (§4.3).** ΔD_cos beats Evo 2 ΔLL by +0.092 AUROC (DeLong p < 10⁻⁵⁰), and adds +0.017 incremental info over the (ΔD + ΔLL) ensemble (DeLong p = 3.6 × 10⁻¹⁵). The information that gDTR captures is not subsumed by what the model itself predicts; it is an internal signal.
+- **(M4) Discovery of conservation-discordant regulatory regions (§4.6, §5.0).** chr22 high-gDTR / low-PhyloP regions are 1.62× enriched for GTEx eQTLs (p = 5.4 × 10⁻⁵⁶), 1.50× for GWAS Catalog SNPs (p = 1.6 × 10⁻⁷), and 1.90× for ENCODE enhancer-like cCREs (p < 10⁻³⁰⁰). gDTR identifies functionally active genomic regions that sequence-conservation methods miss.
 
-### 5.1b Why does `‖Δh‖₂` win at scoring but lose at mechanism?
-
-`‖Δh‖₂` retains the *magnitude* of variant-induced shift but discards the *direction* and *layer-relative* information. This is exactly what makes it a strong *scorer*: variant pathogenicity correlates strongly with how much a variant disturbs the model's internal representations, irrespective of *what kind* of disturbance it is. But the same magnitude-only encoding is what makes `‖Δh‖₂` mechanistically uninterpretable: it does not distinguish "shallow splice motif disturbance" from "deep structural disturbance" because both look like a number on a layer index. The two tools represent a fundamental trade-off between *raw discrimination* and *mechanistic resolution*.
+These four lines of evidence are coherent: gDTR identifies *where* in the layer hierarchy a variant or sequence is computationally resolved, and the answer correlates with both variant-class biology (M1, M2) and external functional annotations (M4). The perturbation magnitude `‖Δh‖₂` is correlated with gDTR (Spearman ρ = 0.57) — both reflect variant-induced internal disturbance — but `‖Δh‖₂` discards the layer-index information that powers M1, M2, and M4. Residualizing ΔD on `‖Δh‖₂` leaves AUROC 0.645 (§4.4.3); this residual variance is the *layer-resolution* component, the reason the per-variant trajectory carries mechanistic content beyond a single magnitude per layer.
 
 ### 5.2 Splice site as universal signature
 
@@ -500,7 +465,7 @@ This honest framing strengthens rather than weakens the contribution.
 
 ---
 
-## 5.6 Robustness and ablations (Tier 1+2: T1.4, T2.2, T2.3) — **NEW**
+### 5.6 Robustness and ablations (Tier 1+2: T1.4, T2.2, T2.3) — **NEW**
 
 **T1.4 — Bootstrap stability (1,000 resamples).** ΔD_cos vector AUROC = 0.8436 (95 % CI [0.833, 0.853]); ΔD_jsd vector 0.8225 [0.812, 0.832]; Evo 2 ΔLL alone 0.7514 [0.739, 0.762]; Ensemble (ΔD_cos + ΔLL) 0.8607 [0.851, 0.870]. Bootstrap CI brackets the point estimate for all four models and reproduces Phase 3's reported [0.831, 0.857] within 0.005.
 
@@ -536,17 +501,17 @@ PALB2 and BRCA1 are the highest-failure genes and both are repeat-rich tumor sup
 
 ## 7. Conclusion (0.5 pages)
 
-We approach genomic CLM interpretability with **two complementary training-free tools** and report both honestly.
+We introduce **gDTR (Genomic Deep-Thinking Ratio)**, the first systematic adaptation of NLP-DTR to genomic causal language models, and demonstrate that it provides a layer-resolved interpretability framework with the following contributions:
 
-1. **Scorer (★ new headline)**: `‖Δh‖₂`, an under-explored baseline in genomic foundation-model variant scoring, achieves AUROC **0.926** on 10,910 ClinVar variants — beating Evo 2 sequence likelihood (+0.175), attention rollout (+0.254), and integrated gradients (+0.399). To our knowledge this is the first systematic single-feature `‖Δh‖₂`-per-layer benchmark in this domain, and identifies a method-comparison gap in the variant-effect-prediction literature.
-2. **Mechanistic probe (★)**: **gDTR**, a layer-wise convergence-trajectory metric, achieves AUROC 0.844 — slightly weaker as a raw score but provides three irreducible mechanistic properties (P1 layer-index reference, P2 class-stratified disruption layers, P3 connection to genome-wide layer-stratified phenomena) and retains independent variance after residualizing on `‖Δh‖₂` (AUROC 0.645).
-3. **Methodological**: First systematic adaptation of NLP-DTR to genomic CLMs with architecture-aware calibration (γ_cos = 0.40, ρ = 0.80, q70); discovery of Evo 2's last-block idleness (h_30 ≡ h_31), inverting HyenaDNA's L7 alignment spike; canonical deep-thinking tap = L = 29.
-4. **Empirical (gDTR-enabled)**: Splice deep-thinking signal universal in per-bp causal-LM models, replicates across chr22 + chr17 and across Evo 2 + HyenaDNA-large.
-5. **Mechanism case studies (gDTR-enabled)**: Class-stratified disruption layers — splice variants peak at shallow L7, missense at deep L28; gives a per-variant *layer profile* that `‖Δh‖₂` cannot.
-6. **Discovery (gDTR-enabled)**: Q2 conservation discordance regions enriched 1.62× for GTEx eQTLs, 1.50× for GWAS Catalog SNPs, 1.90× for ENCODE enhancer-like cCREs — independent functional evidence beyond annotation enrichment.
-7. **Cross-architecture**: Two-tier within-family invariance refines the "universal" claim.
+1. **Methodological.** Architecture-aware adaptation of NLP-DTR — cosine-distance UR-lens with q70 calibration (γ_cos = 0.40, ρ = 0.80) for vocab |V| ≤ 512, handling of Evo 2's last-block idleness (h_30 ≡ h_31; opposite of HyenaDNA's L7 alignment spike), and tuned-lens recovery at all 32 layers (30/32 ≥ 98 %). Canonical deep-thinking tap L = 29.
+2. **Headline empirical.** On 10,910 ClinVar variants across 15 cancer-associated genes, ΔD_cos vector AUROC = 0.844 with DeLong-significant incremental information beyond Evo 2 likelihood (ΔAUROC +0.092, p < 10⁻⁵⁰; ensemble +0.017, p = 3.6 × 10⁻¹⁵). Per-layer ablation shows the signal is a layer-trajectory property (vector +0.05–0.12 over best single layer).
+3. **Splice universality.** Splice donor/acceptor sites form a universal shallow-thinking signature across chr22 + chr17 and across two architecture families (Evo 2 + HyenaDNA-large) — splice grammar resolution is a shallow circuit in genomic CLMs.
+4. **Class-stratified mechanism.** Per-variant 32-layer ΔD trajectories distinguish shallow (splice motif, L5–L8), intermediate, and deep (protein structural, L24–L28) disruption — a layer-resolved readout no single-scalar score provides.
+5. **Functionally validated discovery.** Q2 conservation-discordant regions (1.9 Mb on chr22) are 1.62× enriched for GTEx eQTLs, 1.50× for GWAS Catalog SNPs, 1.90× for ENCODE enhancer-like cCREs — gDTR identifies lineage-specific regulatory elements undetectable by sequence conservation.
+6. **Cross-architecture refinement.** Two-tier within-family invariance (causal-LM ρ ≥ 0.52, MLM ρ ≥ 0.66, cross-family weakly negative) clarifies the boundaries of the "universal" claim.
+7. **Method-comparison contribution.** We benchmark gDTR against attention rollout, integrated gradients, and per-layer hidden-state perturbation magnitude `‖Δh‖₂`. gDTR beats rollout (+0.172) and IG (+0.316) decisively (DeLong p < 10⁻⁵⁰). The simple `‖Δh‖₂` baseline achieves AUROC 0.926, exceeding gDTR's discrimination by 0.083 — we identify it as a previously under-reported strong baseline that future variant-scoring evaluations should include. gDTR captures layer-resolved variance that `‖Δh‖₂` does not (residualized AUROC 0.645) and provides the mechanism, splice, and discovery findings (3–5) above.
 
-The take-away for the field: **interpretability and raw discrimination are different figures of merit.** A method that wins at scoring may not win at mechanism, and vice versa — both deserve honest, side-by-side reporting.
+The take-away for the field: gDTR is the first layer-resolved interpretability tool for genomic CLMs whose mechanistic readout is supported by genome-wide replication, per-variant case studies, and external functional validation — and we encourage the variant-effect-prediction community to adopt `‖Δh‖₂` as a standard scoring baseline alongside likelihood-based scores in future evaluations.
 
 **Future work**:
 - gDTR × SAE feature analysis on Evo 2 layer 26 (Goodfire 2026)
