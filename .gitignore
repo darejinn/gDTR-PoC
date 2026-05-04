@@ -86,3 +86,15 @@ scripts/*.bak2
 scripts/*.b64
 # Logs (large + non-deterministic)
 logs/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.synctex(busy)
+.Rhistory
