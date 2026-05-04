@@ -148,9 +148,13 @@ def draw_schema(ax):
     #   y-center, label, raw D_cos at that layer, run-min over k<=ell.
     # Running-min is computed bottom-up (ell=1..32) so it is monotone non-
     # increasing as we travel upward in the figure.
-    raw_seq = {32: 0.39, 31: 0.40, 30: 0.39, 29: 0.42, 2: 0.78, 1: 0.92}
-    # cumulative running min as ell increases
-    rm_full = {1: 0.92, 2: 0.78, 29: 0.42, 30: 0.39, 31: 0.39, 32: 0.39}
+    # Intentionally non-monotonic raw values so the running-min envelope
+    # is visibly different from raw at layers 2 / 29 / 31 (the "stair-step"
+    # pattern that makes the envelope semantically distinct from raw).
+    raw_seq = {32: 0.39, 31: 0.62, 30: 0.39, 29: 0.65, 2: 0.92, 1: 0.78}
+    # rm[1]=0.78, rm[2]=min(0.78,0.92)=0.78, ..., rm[29]=0.45 (assumed
+    # progressive drop in the unshown middle), rm[30]=0.39, rm[31..32]=0.39
+    rm_full = {1: 0.78, 2: 0.78, 29: 0.45, 30: 0.39, 31: 0.39, 32: 0.39}
     GAMMA = 0.40
 
     rows = [
