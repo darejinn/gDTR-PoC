@@ -144,16 +144,24 @@ def draw_schema(ax):
 
     # Eight rows shown as a sample of the 32-layer stack:
     #   32, 31, 30, 29, ..., 2, 1
-    # For each row store: y-center, label, run-min D_cos value, settled flag
+    # For each row store:
+    #   y-center, label, raw D_cos at that layer, run-min over k<=ell.
+    # Running-min is computed bottom-up (ell=1..32) so it is monotone non-
+    # increasing as we travel upward in the figure.
+    raw_seq = {32: 0.39, 31: 0.40, 30: 0.39, 29: 0.42, 2: 0.78, 1: 0.92}
+    # cumulative running min as ell increases
+    rm_full = {1: 0.92, 2: 0.78, 29: 0.42, 30: 0.39, 31: 0.39, 32: 0.39}
+    GAMMA = 0.40
+
     rows = [
-        (7.2, "32$^{\\mathrm{nd}}$ Layer", 0.39, True),
-        (6.2, "31$^{\\mathrm{st}}$ Layer", 0.40, True),
-        (5.2, "30$^{\\mathrm{th}}$ Layer", 0.39, True),
-        (4.2, "29$^{\\mathrm{th}}$ Layer", 0.42, False),
-        (3.2, "$\\ldots$",                None, None),
-        (2.2, "$\\ldots$",                None, None),
-        (1.2, "2$^{\\mathrm{nd}}$ Layer",  0.78, False),
-        (0.2, "1$^{\\mathrm{st}}$ Layer",  0.92, False),
+        (7.2, "32$^{\\mathrm{nd}}$ Layer", raw_seq[32], rm_full[32]),
+        (6.2, "31$^{\\mathrm{st}}$ Layer", raw_seq[31], rm_full[31]),
+        (5.2, "30$^{\\mathrm{th}}$ Layer", raw_seq[30], rm_full[30]),
+        (4.2, "29$^{\\mathrm{th}}$ Layer", raw_seq[29], rm_full[29]),
+        (3.2, "$\\ldots$",                 None,        None),
+        (2.2, "$\\ldots$",                 None,        None),
+        (1.2, "2$^{\\mathrm{nd}}$ Layer",  raw_seq[2],  rm_full[2]),
+        (0.2, "1$^{\\mathrm{st}}$ Layer",  raw_seq[1],  rm_full[1]),
     ]
 
     # --- Layer column (left, vertical green stack) ---
@@ -175,83 +183,100 @@ def draw_schema(ax):
                 color="white" if col in ("#2e6b3c", "#3d8a4d") else "black",
                 fontweight="bold")
 
-    # --- Mini-histogram cluster: cosine UR lens (raw D_cos sample) ---
-    def mini_hist(cx, yc, color="#bbbbbb", peak_layer="middle"):
-        """Draw a tiny 5-bar histogram centered at (cx, yc)."""
-        bar_w = 0.10
-        gap = 0.02
-        if peak_layer == "right":
-            heights = [0.10, 0.18, 0.30, 0.45, 0.30]
-        elif peak_layer == "left":
-            heights = [0.40, 0.30, 0.18, 0.10, 0.06]
-        elif peak_layer == "middle":
-            heights = [0.10, 0.25, 0.42, 0.25, 0.10]
-        for i, h in enumerate(heights):
-            x = cx - 2 * (bar_w + gap) + i * (bar_w + gap)
-            ax.add_patch(Rectangle((x, yc + 0.10), bar_w, h * 0.45,
-                                     facecolor=color, edgecolor="#444444",
-                                     linewidth=0.4))
+    # --- Horizontal-bar visualisation: Cosine UR lens raw D_cos and run-min ---
+    # Bar length in axis units encodes the value 0..1.0 mapped to BAR_W.
+    BAR_W = 1.40       # axis-unit width for a value of 1.0
+    BAR_H = 0.42       # bar height
+    lens_x_left = 3.30        # left edge of cosine UR lens bars
+    runmin_x_left = 5.20      # left edge of running-min bars
+    val_x = 6.95              # numeric value column
 
-    lens_x = 4.0
-    runmin_x = 5.6
-    val_x = 7.2
-    for yc, lbl, dcos_val, settled in rows:
+    def _draw_value_bar(x_left, yc, value, fill, label_value=False):
+        """Horizontal thermometer bar from x_left, length proportional to
+        `value` (0..1). Returns the right-end x-coordinate."""
+        length = max(BAR_W * float(value), 0.04)
+        ax.add_patch(Rectangle(
+            (x_left, yc + (0.75 - BAR_H) / 2), length, BAR_H,
+            facecolor=fill, edgecolor="#444444", linewidth=0.5))
+        # 0..1 axis tick at bottom of the lens column (only for top row)
+        return x_left + length
+
+    for yc, lbl, raw_v, rm_v in rows:
         if lbl == "$\\ldots$":
-            ax.text(lens_x, yc + 0.4, "$\\vdots$",
-                     ha="center", va="center", fontsize=14, color="#888888")
-            ax.text(runmin_x, yc + 0.4, "$\\vdots$",
-                     ha="center", va="center", fontsize=14, color="#888888")
-            ax.text(val_x, yc + 0.4, "$\\vdots$",
-                     ha="center", va="center", fontsize=14, color="#888888")
+            for cx in (lens_x_left + BAR_W / 2,
+                        runmin_x_left + BAR_W / 2,
+                        val_x):
+                ax.text(cx, yc + 0.4, "$\\vdots$",
+                         ha="center", va="center", fontsize=14,
+                         color="#888888")
             continue
-        # Determine peak side based on layer depth (deeper = sharper toward right)
-        if dcos_val < 0.45:
-            peak = "right"
-        elif dcos_val < 0.70:
-            peak = "middle"
-        else:
-            peak = "left"
-        # Cosine UR lens histogram (raw)
-        mini_hist(lens_x, yc, color="#dddddd", peak_layer=peak)
-        # Running-min histogram (sharper, biased left)
-        mini_hist(runmin_x, yc, color="#9ec5e6",
-                   peak_layer="right" if dcos_val < 0.70 else peak)
-        # Numeric value
-        ax.text(val_x, yc + 0.38, f"{dcos_val:.2f}",
-                 ha="center", va="center", fontsize=9.0)
-        # Arrow: layer → lens
+
+        # Cosine UR lens raw bar (faded grey if above γ, light blue if below)
+        col_raw = "#9ec5e6" if raw_v <= GAMMA else "#cccccc"
+        _draw_value_bar(lens_x_left, yc, raw_v, col_raw)
+        ax.text(lens_x_left + BAR_W * raw_v + 0.06, yc + 0.38,
+                 f"{raw_v:.2f}", va="center", fontsize=7.5,
+                 color="#333333")
+
+        # Running-min bar (always blue if ≤ γ, else light grey)
+        col_rm = "#1f77b4" if rm_v <= GAMMA else "#cccccc"
+        _draw_value_bar(runmin_x_left, yc, rm_v, col_rm)
+        ax.text(runmin_x_left + BAR_W * rm_v + 0.06, yc + 0.38,
+                 f"{rm_v:.2f}", va="center", fontsize=7.5,
+                 color="#333333")
+
+        # Numeric value column (final settling-depth value at this layer)
+        ax.text(val_x, yc + 0.38, f"{rm_v:.2f}",
+                 ha="center", va="center", fontsize=9.0,
+                 color="#1f3b6b" if rm_v <= GAMMA else "#444444",
+                 fontweight="bold" if rm_v <= GAMMA else "normal")
+        # Arrow from layer box to lens column
         ax.add_patch(FancyArrowPatch(
-            (box_x + box_w + 0.05, yc + 0.38), (lens_x - 0.65, yc + 0.38),
+            (box_x + box_w + 0.05, yc + 0.38), (lens_x_left - 0.05, yc + 0.38),
             arrowstyle="-|>", mutation_scale=8, linewidth=0.7,
             color="#555555"))
-        # Arrow: lens → run-min
-        ax.add_patch(FancyArrowPatch(
-            (lens_x + 0.55, yc + 0.38), (runmin_x - 0.65, yc + 0.38),
-            arrowstyle="-|>", mutation_scale=8, linewidth=0.7,
-            color="#555555"))
-        # Arrow: run-min → value
-        ax.add_patch(FancyArrowPatch(
-            (runmin_x + 0.55, yc + 0.38), (val_x - 0.30, yc + 0.38),
-            arrowstyle="-", mutation_scale=8, linewidth=0.7,
-            color="#555555"))
+
+    # γ_cos vertical reference line through both bar columns
+    for x_left in (lens_x_left, runmin_x_left):
+        gx = x_left + BAR_W * GAMMA
+        ax.plot([gx, gx], [-0.05, 7.95], color="#d62728", linestyle="--",
+                 linewidth=0.9, alpha=0.85)
+    # γ_cos label under each column
+    for x_left, lbl_text in [(lens_x_left,
+                               f"$\\gamma_{{\\cos}}\\!=\\!{GAMMA:.2f}$"),
+                              (runmin_x_left,
+                               f"$\\gamma_{{\\cos}}\\!=\\!{GAMMA:.2f}$")]:
+        gx = x_left + BAR_W * GAMMA
+        ax.text(gx, -0.45, lbl_text, ha="center", va="top",
+                 fontsize=7.5, color="#d62728")
+    # 0..1 axis tick under each bar column
+    for x_left in (lens_x_left, runmin_x_left):
+        for v in (0.0, 0.5, 1.0):
+            ax.plot([x_left + BAR_W * v, x_left + BAR_W * v],
+                     [-0.05, 0.05], color="#888888", linewidth=0.6)
+            ax.text(x_left + BAR_W * v, -0.18, f"{v:.1f}",
+                     ha="center", va="top", fontsize=6.5, color="#888888")
 
     # Section labels above the columns
-    ax.text(lens_x, 8.05, "Cosine UR\nLens",
+    lens_x_center = lens_x_left + BAR_W / 2
+    runmin_x_center = runmin_x_left + BAR_W / 2
+    ax.text(lens_x_center, 8.05, "Cosine UR lens\n(raw $D_{\\cos}$)",
              ha="center", va="bottom", fontsize=8.5, fontweight="bold",
              color="#333333")
-    ax.text(runmin_x, 8.05, "Running\nMin $D_{\\cos}$",
+    ax.text(runmin_x_center, 8.05, "Running-min envelope\n($\\min_{k\\leq\\ell} D_{\\cos}$)",
              ha="center", va="bottom", fontsize=8.5, fontweight="bold",
              color="#333333")
-    ax.text(val_x, 8.05, "$D_{\\cos}$ value",
+    ax.text(val_x, 8.05, "$c(t)$\nreadout",
              ha="center", va="bottom", fontsize=8.5, fontweight="bold")
 
-    # Dashed boundary boxes around lens+run-min and value columns
-    for x_left, x_right in [(lens_x - 0.95, runmin_x + 0.95)]:
-        rect = Rectangle((x_left, -0.1), x_right - x_left, 7.95,
-                          fill=False, linestyle="--", linewidth=0.7,
-                          edgecolor="#3a5f3a", alpha=0.6)
-        ax.add_patch(rect)
-    rect_v = Rectangle((val_x - 0.6, -0.1), 1.2, 7.95,
+    # Dashed boundary boxes around lens+run-min cluster and value column
+    rect_lr = Rectangle(
+        (lens_x_left - 0.15, -0.6),
+        (runmin_x_left + BAR_W + 0.15) - (lens_x_left - 0.15), 8.5,
+        fill=False, linestyle="--", linewidth=0.7,
+        edgecolor="#3a5f3a", alpha=0.6)
+    ax.add_patch(rect_lr)
+    rect_v = Rectangle((val_x - 0.45, -0.1), 0.9, 8.0,
                         fill=False, linestyle="--", linewidth=0.7,
                         edgecolor="#3a5f3a", alpha=0.6)
     ax.add_patch(rect_v)
@@ -263,12 +288,12 @@ def draw_schema(ax):
              [0.45, 0.45, 7.65, 7.65], color="black", linewidth=1.0)
     ax.plot([bracket_x + 0.4, bracket_x + 0.6], [4.0, 4.0],
              color="black", linewidth=1.0)
-    for yc, lbl, dcos_val, settled in rows:
+    for yc, lbl, raw_v, rm_v in rows:
         if lbl == "$\\ldots$":
             ax.text(settle_x + 0.6, yc + 0.4, "$\\vdots$",
                      ha="center", va="center", fontsize=14, color="#888888")
             continue
-        if settled:
+        if rm_v <= GAMMA:  # settled at this layer
             ax.scatter(settle_x + 0.6, yc + 0.38, s=140, marker="o",
                         facecolor="white", edgecolor="#1f3b6b", linewidth=1.6,
                         zorder=3)
