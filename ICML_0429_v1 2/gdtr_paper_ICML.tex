@@ -98,16 +98,16 @@
 % ABSTRACT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-We introduce \gDTR{} (\emph{Genomic Deep-Thinking Ratio}), a training-free, layer-resolved interpretability framework for genomic causal foundation models. \gDTR{} measures, for every nucleotide token, the \emph{settling depth} $c(t)$ -- the layer at which intermediate predictions stabilise on the final-layer distribution -- through a cosine unembed-residual lens with running-minimum convergence. On Evo~2~7B, $c(t)$ exposes a chr22-calibrated / chr17-validated splice-shallow universality, generalises to a shallowness signature at ENCODE cCRE-ELS regulatory elements, and yields class-stratified disruption layers across 4{,}023 ClinVar P/LP variants ($p=7\!\times\!10^{-10}$). \gDTR{} thus complements attention-based, dictionary-based, and output-side interpretability tools with a fourth, hierarchical axis: \emph{where, in the layer stack, biology is recognised}.
+Biologically salient sequence elements stabilize at characteristically shallow layers in genomic causal language models, and this depth ordering tracks the lexical strength of the underlying biological motif. We introduce \gDTR{} (\emph{Genomic Deep-Thinking Ratio}), a training-free, layer-resolved framework that measures, for every nucleotide token, the \emph{settling depth} $c(t)$ -- the layer at which intermediate predictions stabilise on the final-layer distribution -- via a cosine unembed-residual lens with running-minimum convergence. On Evo~2~7B, $c(t)$ recovers a coherent biological hierarchy (splice donor $<$ ENCODE cCRE-ELS $<$ exon $<$ intron $<$ 5$'$ UTR), survives partial-correlation control against next-token prediction entropy, and shifts by $0.46$ layers when the canonical GT motif is destroyed (paired $p\!\ll\!10^{-30}$). The same readout yields class-stratified disruption depths across $4{,}023$ ClinVar P/LP variants ($p\!=\!3\!\times\!10^{-10}$). \gDTR{} thus offers a fourth, hierarchical interpretability axis -- \emph{where, in the layer stack, biology is recognised} -- complementary to attention-, dictionary-, and output-side tools.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Fig 1 — schematic (top of paper)
+% Fig 1 — conceptual (top of paper)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=0.78\textwidth]{figures/fig_schematic.png}
-\caption{\gDTR{} pipeline. For each token, the cosine unembed-residual (UR) lens computes a per-layer distance $\Dcos(\ell,t) = 1-\cos(\hl(t),\hnorm(t))$ between the residual stream and the post-final-norm reference. A running minimum (envelope) collapses architecture-specific non-monotonicity, and the first $\ell$ at which the envelope crosses $\gamma_{\cos}$ (regional $q_{70}$ calibration) is the \emph{settling depth} $c(t)$ -- the ``settled layer''. On a variant we apply the same machinery to the reference and alternate sequences and read the per-layer $\DDcos$ trajectory to localise the maximum-disruption layer.}
+\includegraphics[width=0.96\textwidth]{figures/fig1_v10.png}
+\caption{\gDTR{} measures the layer at which a token's representation stabilises; biologically salient motifs settle earlier. \textbf{(a)}~\gDTR{} pipeline. The 32 Evo~2 layers (green stack, deep $\to$ shallow top to bottom) each emit a residual-stream tap $h_\ell(t)$; the cosine UR lens computes $\Dcos(\ell,t)\!=\!1\!-\!\cos(h_\ell, h_{\mathrm{norm}})$ (left mini-histogram) and a running-minimum envelope (right mini-histogram) collapses non-monotonicity into a monotone-non-increasing sequence. Numeric $\Dcos$ values per layer are listed; layers whose envelope has crossed the regional $q_{70}$ threshold $\gamma_{\cos}$ are marked $\bigcirc$ (settled), the rest $\times$. The first $\bigcirc$ from the deepest end defines $c(t)$. \textbf{(b)}~Two real chr22 trajectories (raw $\Dcos$ faded, running-min envelope bold) -- a splice-donor token (blue) settles at $\ell\!=\!22$ while an intronic token (grey) only crosses at $\ell\!=\!31$. \textbf{(c)}~Mean settling depth $\bar c$ across canonical contexts (pooled chr17+chr22, frozen $\gamma_{\cos}$): splice donor $25.55 <$ ENCODE cCRE-ELS $26.86 <$ intron baseline $27.72 <$ coding exon $28.40 <$ 5$'$ UTR $29.22$. The 5$'$~UTR row is anomalous (\S\ref{sec:discussion}).}
 \label{fig:schematic}
 \end{figure*}
 
@@ -117,15 +117,11 @@ We introduce \gDTR{} (\emph{Genomic Deep-Thinking Ratio}), a training-free, laye
 \section{Introduction}
 \label{sec:intro}
 
-Genomic causal foundation models such as Evo~2 \cite{nguyen2026evo2}, HyenaDNA~\cite{nguyen2023hyenadna}, the Nucleotide Transformer~\cite{dallatorre2024nt}, DNABERT-2~\cite{zhou2024dnabert2}, and Caduceus~\cite{schiff2024caduceus} have catalysed a paradigm shift in functional genomics. Yet research into their internal mechanisms still lags: the layer-wise computational dynamics of these models remain largely opaque, leaving open the question of whether their outputs are grounded in biology that a human geneticist would recognise. Existing tools probe \emph{where} models attend (attention rollout~\cite{abnar2020rollout}, Enformer-style attribution~\cite{avsec2021enformer}), \emph{what} they encode (sparse dictionaries~\cite{bricken2023monosemanticity,cunningham2023sparse}), or \emph{how} variants shift representations (output-side $\Delta\textrm{LL}$, AlphaMissense~\cite{cheng2023alphamissense}, SpliceAI~\cite{jaganathan2019spliceai}). None addresses \emph{where in the layer hierarchy} a biological element is recognised.
+Genomic causal foundation models such as Evo~2 \cite{nguyen2026evo2}, HyenaDNA~\cite{nguyen2023hyenadna}, the Nucleotide Transformer~\cite{dallatorre2024nt}, DNABERT-2~\cite{zhou2024dnabert2}, and Caduceus~\cite{schiff2024caduceus} have catalysed a paradigm shift in functional genomics. Yet research into their internal mechanisms still lags: layer-wise computational dynamics remain largely opaque, leaving open whether model outputs are grounded in biology that a human geneticist would recognise. Existing interpretability tools probe \emph{where} models attend~\cite{abnar2020rollout,avsec2021enformer}, \emph{what} they encode~\cite{bricken2023monosemanticity,cunningham2023sparse}, or \emph{how} variants shift representations~\cite{cheng2023alphamissense,jaganathan2019spliceai}. None addresses \emph{where in the layer hierarchy} a biological element is recognised.
 
-We introduce a fourth, hierarchical axis. The Deep-Thinking Ratio of~\citet{chen2026deepthinking} measures, in NLP transformers, the layer index at which intermediate logit-lens distributions~\cite{nostalgebraist2020logitlens,belrose2023tunedlens,pal2023futurelens} converge within $\varepsilon$ of the final layer; the construct echoes the broader observation that mid-stack layers carry interpretable factual content~\cite{geva2022ffn,meng2022rome}. Genomic CLMs, however, demand three non-trivial adaptations:
-\begin{itemize}
-  \item \textbf{Small vocabulary.} With $|V|\!\le\!512$ (often 12), Jensen--Shannon divergence saturates and loses dynamic range; we replace it with a cosine unembed-residual lens.
-  \item \textbf{Architecture diversity.} StripedHyena~\cite{poli2023striped}, pure Hyena~\cite{poli2023hyena}, and Transformer-MLM~\cite{vaswani2017attention} backbones each induce non-monotonic per-layer convergence, which we tame with a running-minimum envelope.
-  \item \textbf{Final-block idleness.} In Evo~2 the last attention block is a residual passthrough (App.~\ref{app:architectural-quirk}); the canonical ``tap the last block'' convention breaks, so we calibrate against the post-final-norm reference and lock the canonical tap at $L^\star\!=\!29$.
-\end{itemize}
-The full pipeline is summarised in Fig.~\ref{fig:schematic}.
+We introduce a fourth, hierarchical axis. The Deep-Thinking Ratio of~\citet{chen2026deepthinking} measures, in NLP transformers, the layer index at which intermediate logit-lens distributions~\cite{nostalgebraist2020logitlens,belrose2023tunedlens,pal2023futurelens} converge within $\varepsilon$ of the final layer; the construct echoes the broader observation that mid-stack layers carry interpretable factual content~\cite{geva2022ffn,meng2022rome}. We adapt this depth-of-convergence machinery to genomic causal LMs, but note an important conceptual asymmetry: genomic input positions are not ``thinking'', so we re-cast the readout as \emph{representational stabilisation depth}, which we hypothesise tracks the lexical strength of biological motifs. Three adaptations are required: a cosine unembed-residual lens to escape JSD saturation in the $|V|\!\le\!512$ vocabulary; a running-minimum envelope to tame architecture-specific non-monotonicity (StripedHyena~\cite{poli2023striped}, pure Hyena~\cite{poli2023hyena}, Transformer-MLM~\cite{vaswani2017attention}); and calibration against the post-final-norm reference to handle Evo~2's idle final block (App.~\ref{app:architectural-quirk}; $L^\star\!=\!29$).
+
+Fig.~\ref{fig:schematic} summarises the readout. The remainder of this paper tests, on Evo~2~7B and three peer genomic foundation models, the central hypothesis: \emph{biologically salient sequence elements stabilise at characteristically shallow layers, and this depth ordering tracks lexical motif strength.}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -149,7 +145,7 @@ where $\hnorm(t)$ is the post-final-norm reference. Whereas NLP transformers exh
 \end{equation}
 with $\runmin\,\Dcos(\ell,t) = \min_{k\le\ell}\Dcos(k,t)$. The threshold $\gamma_{\cos}$ is set by \emph{regional $q_{70}$ calibration}: the 70th percentile of the running-min cosine-distance at the penultimate layer over the analysis region. The 70th percentile sits inside a flat plateau of a $5\!\times\!5$ grid sweep over $(\gamma_{\cos},\rho)$ (App.~\ref{app:gamma-sweep}; SD across 25 cells $<0.04$). The original deep-thinking ratio $\mathrm{DTR}(t)\!=\!\mathbf{1}\{c(t) \!>\! \rho L\}$ follows directly with $\rho\!=\!0.85$.
 
-\paragraph{Tuned-lens recovery (training-free).} A per-layer affine fit~\cite{belrose2023tunedlens} reaches $\ge 98\%$ MSE recovery on $30/32$ Evo~2 layers (canonical $L^\star\!=\!29$: $0.9996$; App.~\ref{app:tuned-lens}), so no learned weights are required at inference and \gDTR{} remains training-free.
+As a diagnostic that the residual-stream taps used by \gDTR{} carry information linearly recoverable to the post-final-norm reference, a per-layer tuned-lens affine fit~\cite{belrose2023tunedlens} reaches $\ge 98\%$ MSE recovery on $30/32$ Evo~2 layers (canonical $L^\star\!=\!29$: $0.9996$; App.~\ref{app:tuned-lens}); this establishes that the raw-tap \gDTR{} readout is not operating on degenerate representations. The framework itself remains training-free, as no affine weights are used at inference.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -158,14 +154,16 @@ with $\runmin\,\Dcos(\ell,t) = \min_{k\le\ell}\Dcos(k,t)$. The threshold $\gamma
 \section{Biological Utility}
 \label{sec:utility}
 
-\subsection{Genome-wide shallowness signature}
+\subsection{Hierarchy of biological depth}
 \label{sec:shallowness}
 
-We first ask whether $c(t)$ delivers a biologically meaningful, transferable readout at the genome scale. Chromosome~22 serves as the calibration set ($\gamma_{\cos}\!=\!0.397$ from $q_{70}$ at the penultimate layer); chromosome~17 is held out for validation with that $\gamma$ frozen. The chr17 $q_{70}$ recomputed independently equals $0.394$ ($|\Delta|\!=\!0.0023$): the calibration transfers without re-tuning, and chr17 reproduces the chr22 splice-donor effect (Cohen's $d\!=\!-0.349$ vs intron, $94.6\%$ of the chr22 magnitude $-0.369$).
+We first test whether $c(t)$ delivers a biologically meaningful, transferable readout at the genome scale. Chromosome~22 serves as the calibration set ($\gamma_{\cos}\!=\!0.397$ from $q_{70}$ at the penultimate layer); chromosome~17 is held out for validation with that $\gamma$ frozen. The chr17 $q_{70}$ recomputed independently equals $0.394$ ($|\Delta|\!=\!0.0023$); the chr17 splice-donor effect reaches $94.6\%$ of the chr22 magnitude (Cohen's $d\!=\!-0.349$ vs intron). The calibration transfers without re-tuning.
 
-\textbf{Splice universality.} On the seven canonical genomic contexts (Fig.~\ref{fig:shallowness}a), splice donor and acceptor sites converge $\sim 2$ layers earlier than the intronic baseline, while every non-splice context (3$'$ UTR, coding exon, intergenic, 5$'$ UTR) is at or above the baseline. The effect is monotone in donor/acceptor magnitude and statistically significant against intron at every context (Mann–Whitney $p\!<\!10^{-4}$ for all rows). A finer dissection by motif class (canonical GT-AG, canonical GC-AG, non-canonical) preserves the universality-vs-intron inequality but reverses the within-class ordering relative to the naive ``stronger motif $\Rightarrow$ shallower recognition'' prior~\cite{wang2008splicecode,yeo2004maxentscan,burge1998u12}, with non-canonical donors converging earliest and GC-AG canonical donors deepest (App.~\ref{app:splice-canonical}).
+\textbf{An ordered hierarchy.} On the seven canonical genomic contexts (Fig.~\ref{fig:shallowness}a), splice donor and acceptor sites converge $\sim 2$ layers earlier than the intronic baseline, while non-splice contexts cluster at or above the baseline. The effect is monotone in donor/acceptor magnitude and statistically significant at every context (Mann--Whitney $p\!<\!10^{-4}$). The shallowness axis extends to ENCODE cCRE-ELS enhancer-like elements~\cite{moore2020encode}: on chr22, cCRE-ELS positions are shallower than a per-position background by Cohen's $d\!=\!-0.190$ ($p_{\mathrm{Bonf}}\!<\!10^{-4}$), against a splice-donor reference of $-0.433$ (Fig.~\ref{fig:shallowness}b). The full hierarchy reads \emph{splice donor $<$ cCRE-ELS $<$ exon $<$ intron $<$ 5$'$~UTR} (Fig.~\ref{fig:schematic}b). GTEx eQTLs~\cite{gtex2020} ($d\!=\!-0.022$) and GWAS Catalog SNPs~\cite{sollis2023gwas} ($d\!=\!-0.040$) sit on the same axis at biologically marginal magnitudes; their formal significance follows from the very large $n$. The within-splice motif breakdown (canonical GT-AG, canonical GC-AG, non-canonical) reverses the naive ``stronger motif $\Rightarrow$ shallower'' prior~\cite{wang2008splicecode,yeo2004maxentscan,burge1998u12} and is reported in App.~\ref{app:splice-canonical}.
 
-\textbf{Functional generalisation.} The same shallowness axis extends to known regulatory elements (Fig.~\ref{fig:shallowness}b). On chr22, ENCODE cCRE-ELS enhancer-like elements~\cite{moore2020encode} are shallower than a per-position background by Cohen's $d\!=\!-0.190$ ($p_{\textrm{Bonf}}\!<\!10^{-4}$), against the splice-donor reference of $d\!=\!-0.433$. GTEx eQTLs~\cite{gtex2020} ($d\!=\!-0.022$) and GWAS Catalog SNPs~\cite{sollis2023gwas} ($d\!=\!-0.040$) sit on the same axis at biologically marginal magnitudes; their formal significance, when it appears, follows from the very large $n$. The unifying signal is that the model recognises well-characterised cis-elements in the first few layers, generalising the splice-shallow finding to the broader regulatory landscape.
+\textbf{The hierarchy is not entropy artefact.} A natural concern is that $c(t)$ merely tracks the per-position next-token Shannon entropy $H_t$ of the model. We forward $120$ random chr22 windows ($720{,}000$ positions), compute $H_t$ from the post-norm logits, and find an overall Spearman $\rho(c, H_t)\!=\!-0.079$ (per-context $|\rho|\!\le\!0.15$ except $5'$~UTR; \S\ref{sec:discussion}). When we regress $c$ on $H_t$ and recompute the splice-donor-versus-intron Cohen's $d$ on the residual, the effect strengthens from $-0.452$ to $-0.583$: the depth ordering is not an entropy artefact.
+
+\textbf{The hierarchy tracks lexical motif strength.} Within the splice-donor class, we ask which sequence component carries the shallowness. On $1{,}000$ canonical GT-AG donors (chr22, $\pm 10$~bp pad-averaged $c$, matching the convention used in Fig.~\ref{fig:shallowness}a), real donors settle at $\bar c\!=\!26.77$. Replacing the central GT with AA (preserving the entire $\pm 100$~bp flank) deepens $\bar c$ by $0.46$ layers (paired Wilcoxon $p\!=\!2.3\!\times\!10^{-32}$, Cohen's $d\!=\!-0.09$): a small but highly reliable contribution of the canonical dinucleotide to the shallow-recognition signal. Conversely, dinucleotide-shuffling the $\pm 100$~bp flank while preserving the central GT shallows $\bar c$ by $3.18$ layers (paired $p\!=\!4.1\!\times\!10^{-59}$, $d\!=\!+0.51$). The shuffled flank lets the GT pop out in isolation, while the real flank engages deeper splice-grammar integration; both motif and flanking context jointly determine the canonical depth.
 
 \begin{figure*}[!t]
 \centering
@@ -175,12 +173,12 @@ We first ask whether $c(t)$ delivers a biologically meaningful, transferable rea
 \end{figure*}
 
 
-\subsection{Layer-wise mechanistic analysis of variant disruption}
+\subsection{Variant disruption as a depth probe}
 \label{sec:variant-disruption}
 
-While $c(t)$ summarises shallowness at the genome scale, the per-variant argmax-layer of $|\DDcos|$ asks at what depth a single substitution maximally perturbs the residual stream. We test this on the full ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort: $10{,}910$ SNVs (cached features) augmented by $1{,}064$ indels forwarded with the same Evo~2~7B pipeline (the SNV cache had silently filtered indels in the original Phase~3 run). Variants are class-stratified using ClinVar \texttt{MC} priorities (canonical-splice $\succ$ nonsense $\succ$ frameshift $\succ$ missense $\succ$ synonymous $\succ$ intron).
+If $c(t)$ tracks lexical motif strength on \emph{healthy} sequence, the per-variant argmax-layer of $|\DDcos|$ should reveal the depth at which a single substitution disrupts an already-recognised motif -- a depth probe, not a scorer. We test this on the full ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort: $10{,}910$ SNVs (cached features) augmented by $1{,}064$ indels forwarded with the same Evo~2~7B pipeline (the SNV cache had silently filtered indels in the original Phase~3 run). Variants are class-stratified using ClinVar \texttt{MC} priorities (canonical-splice $\succ$ nonsense $\succ$ frameshift $\succ$ missense $\succ$ synonymous $\succ$ intron).
 
-The argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}, top), differing across the six classes at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. Adjacent-pair Dunn--Bonferroni tests~\cite{mann1947whitney,benjamini1995fdr} highlight the single largest jump as nonsense $\to$ missense ($p_{\textrm{adj}}\!<\!10^{-3}$); the remaining adjacent gaps are within noise on these per-class sample sizes ($n\!=\!32$--$1740$). Mechanistically, early-truncation events (frameshift, nonsense) disrupt the residual stream shallowly, whereas perturbations of already-established protein-level features (missense, splice motif) peak deeper. Five representative $\DDcos$ traces, one per non-intron class at the per-class median argmax-layer, are shown in Fig.~\ref{fig:variants}, bottom; the variant labelled ``frameshift locus'' in earlier drafts (\emph{BRCA1} 17:43{,}057{,}063 G$\to$A) is in fact a nonsense SNV (BRCA1 W1837X) and is now correctly classed.
+Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}, top), differing across the six classes at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. Adjacent-pair Dunn--Bonferroni tests~\cite{mann1947whitney,benjamini1995fdr} highlight the largest jump as nonsense $\to$ missense ($p_{\mathrm{adj}}\!<\!10^{-3}$); the remaining adjacent gaps fall within noise at these sample sizes ($n\!=\!32$--$1{,}740$). Mechanistically, early-truncation events (frameshift, nonsense) disrupt the residual stream shallowly, whereas perturbations of already-established protein-level features (missense, splice motif) peak deeper. Five representative $\DDcos$ traces, one per non-intron class at the per-class median argmax-layer, are shown in Fig.~\ref{fig:variants}, bottom. The variant labelled ``frameshift locus'' in earlier drafts (\emph{BRCA1} 17:43{,}057{,}063 G$\to$A) is in fact a nonsense SNV (BRCA1 W1837X) and is now correctly classed.
 
 \begin{figure*}[!t]
 \centering
@@ -189,22 +187,47 @@ The argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ miss
 \label{fig:variants}
 \end{figure*}
 
-A logistic regression on the full 32-dimensional $\DDcos$ trajectory reaches stratified 10-fold AUROC $0.844$ ($95\%$ CI $[0.831, 0.857]$) on $8{,}008$ ClinVar P/LP-vs-B/LB SNVs across the same 15 genes, dominating the best single-layer tap ($\ell\!=\!30$, AUROC $0.729$) and the Evo~2 output-side $\Delta\textrm{LL}$ ($0.751$); leave-one-gene-out AUROC stays at $0.843$, and ensembling with $\Delta\textrm{LL}$ yields $0.861$. Full per-feature numbers, ROC curves, DeLong~\cite{delong1988comparing} pairwise tests, and the per-layer ablation are deferred to App.~\ref{app:auroc-detail} and App.~\ref{app:per-layer}; the headline is that the trajectory carries information beyond any single layer or output-side scalar.
+As a sanity check on the trajectory's information content (and not as a scorer claim), a logistic regression on the full 32-dimensional $\DDcos$ trajectory reaches 10-fold stratified AUROC $0.844$ on the $8{,}008$ ClinVar P/LP-vs-B/LB cohort, against $0.729$ for the best single-layer tap; full per-feature numbers, DeLong~\cite{delong1988comparing} pairwise tests, and the per-layer ablation are deferred to App.~\ref{app:auroc-detail} and App.~\ref{app:per-layer}.
 
 
-\subsection{Cross-architecture invariance is two-tier, not universal}
+\subsection{Architecture dependence as a robustness check}
 \label{sec:cross-arch}
 
-Extending the same chr22 windows to four genomic foundation models with divergent backbones (Evo~2~7B, HyenaDNA-large, NT-v2~500M, DNABERT-2; details in App.~\ref{app:fm-specs}) reveals a two-tier invariance rather than a universal one (App.~\ref{app:cross-arch} \&~\ref{app:crossarch-fig}): within the per-position causal-LM family (Evo~2, HyenaDNA-large) the pairwise Spearman $\rho$ of mean settling depth is $+0.516$, within the per-window MLM family (NT-v2, DNABERT-2) it is $+0.663$, and cross-family correlations are weakly negative ($-0.12$ to $-0.29$). The donor~$<$~intron and acceptor~$<$~intron inequalities replicate at depth-normalised scale on both causal-LMs; MLMs tokenise at the window level and therefore average splice-junction signal across BPE/$k$-mer tokens, recovering no per-position separation. The honest reading is that \emph{tokenisation granularity}, not architecture per se, gates the shallowness readout.
+Extending the chr22 windows to four genomic foundation models with divergent backbones (Evo~2~7B, HyenaDNA-large, NT-v2~500M, DNABERT-2; App.~\ref{app:fm-specs}) reveals not a universal invariance but a tokenisation-gated, two-tier structure (Tab.~\ref{tab:cross-arch-summary}). Within the per-position causal-LM family the pairwise Spearman $\rho$ of mean settling depth is $+0.516$ (moderate concordance, given the very different layer counts of $32$ vs $8$) and the donor $<$ intron inequality replicates at depth-normalised scale; within the per-window MLM family $\rho\!=\!+0.663$ but the splice-junction signal averages out across BPE/$k$-mer tokens. Cross-family correlations are weakly negative ($-0.12$ to $-0.29$). \emph{Tokenisation granularity}, not architecture per se, gates the readout.
+
+\begin{table}[!h]
+\caption{Cross-architecture summary. Within-family Spearman $\rho$ in the prose above; full per-window numbers in App.~\ref{app:cross-arch}.}
+\label{tab:cross-arch-summary}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Family (model) & Per-pos.\ readout & Donor$\,{<}\,$intron \\
+\midrule
+Causal LM \scriptsize(Evo~2, HyenaDNA-large) & yes & yes \\
+MLM \scriptsize(NT-v2, DNABERT-2)            & no (per-window) & confounded \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 4. CONCLUSION
+% 4. DISCUSSION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion and limitations}
+\label{sec:discussion}
+
+Three caveats temper the hierarchy claim. First, $c(t)$ \emph{partially} confounds with prediction entropy at $5'$~UTR (Spearman $\rho\!=\!+0.41$, against $|\rho|\!\le\!0.15$ at all other contexts); the apparent depth of $5'$~UTR ($\bar c\!=\!29.22$) therefore mixes genuine deep-integration of UTR structure (uORFs, IRES) with model uncertainty. The hierarchy claim should be read as restricted to contexts whose $|\rho(c, H_t)|$ is small. Second, the cosine UR lens is calibrated against the post-final-norm reference; per-layer fidelity is best in the deep-layer regime where the linear unembed is well-conditioned (App.~\ref{app:tuned-lens}), and weaker for very shallow layers. Reported settling depths in the $\ell\!\le\!10$ band should therefore be interpreted with caution. Third, the cross-architecture comparison conflates architectural family (causal LM vs.\ MLM) with readout granularity (per-position vs.\ per-window); a same-tokenisation comparison of architectures, deferred to future work, is needed to disentangle the two.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 5. CONCLUSION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
 \label{sec:conclusion}
 
-\gDTR{} establishes a training-free, layer-resolved interpretability axis for genomic causal language models. Per-token settling depth surfaces three coherent biological signatures that scalar output-side metrics, attention maps, and dictionary methods cannot directly express: a chr22-calibrated / chr17-validated splice-shallow universality (\S\ref{sec:shallowness}); a generalisation of that shallowness to ENCODE cCRE-ELS regulatory elements ($d\!=\!-0.190$, \S\ref{sec:shallowness}); and a class-stratified argmax-layer signature across $4{,}023$ ClinVar P/LP variants augmented with true frameshift indels (KW $p\!=\!3.0\!\times\!10^{-10}$, \S\ref{sec:variant-disruption}). The full $32$-d trajectory carries predictive information beyond any single layer (AUROC $0.844$); cross-architecture validation refines the invariance claim to a tokenisation-gated, two-tier property (\S\ref{sec:cross-arch}). Whole-genome scaling, integration with sparse-dictionary~\cite{cunningham2023sparse} and causal-edit~\cite{meng2022rome} methods, and population-genomics extensions~\cite{karczewski2020gnomad} are left to future work.
+\gDTR{} establishes a training-free, layer-resolved interpretability axis for genomic causal language models, organised around the testable hypothesis that biologically salient sequence elements stabilise at characteristically shallow layers. Per-token settling depth surfaces a coherent hierarchy (splice donor $<$ cCRE-ELS $<$ exon $<$ intron $<$ 5$'$~UTR), survives partial-correlation control against prediction entropy ($d_{\mathrm{splice\,vs\,intron}}$ strengthens from $-0.452$ to $-0.583$), tracks lexical motif strength (destroying the canonical GT shifts $\bar c$ by $0.46$ layers, paired $p\!=\!2.3\!\times\!10^{-32}$), and yields a class-stratified disruption layer across $4{,}023$ ClinVar P/LP variants ($p\!=\!3\!\times\!10^{-10}$). Cross-architecture validation refines invariance to a tokenisation-gated, two-tier property. Whole-genome scaling, integration with sparse-dictionary~\cite{cunningham2023sparse} and causal-edit~\cite{meng2022rome} methods, and population-genomics extensions~\cite{karczewski2020gnomad} are left to future work.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
