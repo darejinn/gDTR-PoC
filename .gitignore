@@ -95,6 +95,10 @@ logs/
 *.fls
 *.log
 *.out
+*.synctex
 *.synctex.gz
 *.synctex(busy)
 .Rhistory
+
+# Manuscript snapshot zips (the unzipped folder is the canonical version)
+ICML_*.zip
