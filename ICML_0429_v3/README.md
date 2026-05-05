@@ -25,7 +25,12 @@ For the version-history map of the whole repository (including the original
 | `figures/fig_appendix_b.png` | Fig. 4 — per-context bars across four models. |
 | `figures/fig_crossarch.{png,pdf}` | Fig. 5 — cross-architecture two-tier structure. |
 | `figures/fig_auroc.png` | Fig. 6 — variant AUROC four-panel diagnostics. |
+| `MANIFEST.md` | **Per-figure / per-table mapping** (what produces what). Start here. |
 | `scripts/make_v3_figures_remote.py` | Master figure regeneration (runs on H200). |
+| `scripts/regen_fig_shallowness_local.py` | Fig. 2 — local regen from `fig_v9_meta.json`. |
+| `scripts/regen_fig_variants_local.py` | Fig. 3 — local summary regen from `fig_v9_meta.json`. |
+| `scripts/regen_fig_appendix_b_local.py` | Fig. 4 — local regen from `phase4/per_model_summary.json`. |
+| `scripts/regen_fig_auroc_local.py` | Fig. 6 — local regen from Tier-1 baseline JSON / per-layer CSV. |
 | `scripts/make_fig1_trajectory_local.py` | Crops the Fig. 1(b) trajectory PNG locally. |
 | `scripts/redraw_fig1_panel_a_local.py` | Legacy raster schematic (superseded by `fig1_schema.tex`). |
 | `icml2026.sty`, `icml2026.bst` | ICML 2026 style files (do not modify). |
@@ -48,24 +53,36 @@ No internet or model weights required for the build itself.
 
 ## Reproducibility — figure regeneration
 
-All raster figures (Fig. 2–6 and Fig. 1(b)) are regenerated from cached
-hidden-state features by:
+See `MANIFEST.md` for the canonical figure-by-figure mapping (script →
+input data → output path). Two domains:
+
+**Local (no GPU).** Five of the six raster figures rebuild from the
+JSON/CSV summaries vendored under `../results/`:
 
 ```bash
-# On the H200 server (digitalocean-gpu):
-cd /root/gDTR
-GDTR_ROOT=/root/gDTR /root/gDTR/venv/bin/python \
-    scripts/make_v3_figures_remote.py
+python scripts/regen_fig_shallowness_local.py   # Fig 2
+python scripts/regen_fig_variants_local.py      # Fig 3 (summary form)
+python scripts/regen_fig_appendix_b_local.py    # Fig 4
+python scripts/regen_fig_auroc_local.py         # Fig 6
+python scripts/make_fig1_trajectory_local.py    # Fig 1(b) crop
 ```
 
-The local copy of the script is `scripts/make_v3_figures_remote.py`. It
-expects the cached feature files described in the paper appendix
-(GENCODE v44, ENCODE SCREEN cCRE-ELS, ClinVar 2026-04-18, etc.). For
-exact MD5 / data versions see Appendix~E "Reproducibility" inside the
-PDF.
+Fig. 1(a) is pure TikZ (`figures/fig1_combined.tex`) and rebuilds with
+`latexmk`. Fig. 5 (`fig_crossarch`) is also locally renderable via
+`make_v3_figures_remote.py::fig_crossarch()` — it reads only the small
+`results/phase4/concordance_matrix.json`.
 
-Fig. 1(a) is pure TikZ (`figures/fig1_schema.tex`) and rebuilds with the
-LaTeX run.
+**Remote (H200, full per-position regen).**
+
+```bash
+ssh digitalocean-gpu
+cd ~/gDTR
+GDTR_ROOT=$PWD ./venv/bin/python scripts/make_v3_figures_remote.py
+# → results/figures_v3_workshop/{fig1_v10,fig_shallowness,fig_variants,fig_crossarch}.{png,pdf}
+```
+
+The H200 path consumes the full feature caches described in Appendix E
+(GENCODE v44, ENCODE SCREEN cCRE-ELS, ClinVar 2026-04-18, etc.).
 
 ## Font conventions
 
