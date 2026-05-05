@@ -17,10 +17,12 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,shapes.misc}
-% Map \sffamily to Helvetica (phv) so the TikZ schema in Fig 1(a) visually
-% matches the matplotlib raster in Fig 1(b), both rendering as a grotesk
-% sans-serif rather than the Computer-Modern default.
-\usepackage[scaled=0.95]{helvet}
+% Make \sffamily resolve to DejaVu Sans, the EXACT face used by the
+% matplotlib raster figures (Fig 2--6). Combined with the TikZ panels
+% of Fig 1 also using \sffamily, every figure in the paper -- TikZ or
+% matplotlib -- now renders sans-serif text in the same family and
+% weight class.
+\usepackage[scaled=0.95]{DejaVuSans}
 
 % Keep float-only pages from vertically centering figures with large blank tops.
 \makeatletter
@@ -120,9 +122,9 @@ Genomic foundation models encode rich sequence regularities, yet existing tools 
 \begin{figure*}[!t]
 \centering
 \resizebox{0.96\textwidth}{!}{\input{figures/fig1_schema.tex}}
-\vspace{0.35em}
-\includegraphics[width=0.64\textwidth]{figures/fig1_trajectory.png}
-\caption{\gDTR{} measures the layer at which a token's representation stabilises. \textbf{(a)}~Pipeline: each Evo~2 layer emits a residual-stream tap $h_\ell(t)$; the cosine lens compares that tap to the final-layer state $h_L(t)$; a running-minimum envelope tracks the best match so far; and the first threshold crossing defines the settling depth $c(t)$. Lower $c(t)$ means earlier stabilisation. \textbf{(b)}~Two chr22 trajectories illustrate the readout: a splice-donor token settles at $\ell\!=\!22$, whereas an intronic token settles at $\ell\!=\!31$.}
+\vspace{0.50em}
+\resizebox{0.78\textwidth}{!}{\input{figures/fig1_trajectory.tex}}
+\caption{\gDTR{} measures the layer at which a token's representation stabilises. \textbf{(a)}~Pipeline: each Evo~2 layer emits a residual-stream tap $h_\ell(t)$; the cosine lens compares that tap to the final-layer state $h_L(t)$; a running-minimum envelope tracks the best match so far; and the first threshold crossing defines the settling depth $c(t)$. Lower $c(t)$ means earlier stabilisation. \textbf{(b)}~Two chr22 example trajectories: a splice-donor token whose running-min crosses $\gamma_{\cos}\!=\!0.397$ at $\ell\!=\!22$ (blue), and an intronic token that settles only at $\ell\!=\!31$ (grey). Faint traces are the raw $\Dcos(\ell, t)$; thick traces are the running-minimum envelope (Eq.~\ref{eq:settling}).}
 \label{fig:schematic}
 \end{figure*}
 
@@ -173,7 +175,7 @@ with $\runmin\,\Dcos(\ell,t) = \min_{k\le\ell}\Dcos(k,t)$. Lower $c(t)$ means ea
 
 We first test whether $c(t)$ delivers a biologically meaningful, transferable readout at the genome scale. Chromosome~22 serves as the calibration set ($\gamma_{\cos}\!=\!0.397$ from $q_{70}$ at the penultimate layer); chromosome~17 is held out for validation with that $\gamma$ frozen. The chr17 $q_{70}$ recomputed independently equals $0.394$ ($|\Delta|\!=\!0.0023$); the chr17 splice-donor effect reaches $94.6\%$ of the chr22 magnitude (Cohen's $d\!=\!-0.349$ vs intron). The calibration transfers without re-tuning.
 
-\textbf{Context-level ordering.} On canonical genomic contexts (Fig.~\ref{fig:shallowness}a), splice donor and acceptor sites settle $\sim 2$ layers earlier than the intronic baseline, while most non-splice contexts cluster near or above the baseline. We report Cohen's $d$ as the primary effect-size measure throughout; Mann--Whitney $p$-values reach $<\!10^{-4}$ at all contexts but are inflated by the very large $n$ ($\sim\!10^7$ pooled positions) and should be read as a sanity rather than a magnitude statement. The clearest non-splice extension is ENCODE cCRE-ELS enhancer-like elements~\cite{moore2020encode}: on chr22, cCRE-ELS positions are shallower than a per-position background by Cohen's $d\!=\!-0.190$, against a splice-donor reference of $-0.433$ (Fig.~\ref{fig:shallowness}b). GTEx eQTLs~\cite{gtex2020} ($d\!=\!-0.022$) and GWAS Catalog SNPs~\cite{sollis2023gwas} ($d\!=\!-0.040$) point in the same direction but have biologically marginal effect sizes. We therefore treat splice and cCRE-ELS as the main positive signals, and report 5$'$~UTR as anomalous because it is partly entropy-confounded (\S\ref{sec:discussion}).
+\textbf{Context-level ordering.} On canonical genomic contexts (Fig.~\ref{fig:shallowness}a), splice donor and acceptor sites settle $\sim 2$ layers earlier than the intronic baseline, and the remaining contexts cluster near or above it. Effect sizes are reported as Cohen's $d$ throughout; Mann--Whitney $p$-values are dominated by the $\sim\!10^7$ pooled positions and act only as significance sanity checks. Among the regulatory annotations (Fig.~\ref{fig:shallowness}b), ENCODE cCRE-ELS enhancer-like elements~\cite{moore2020encode} are the clearest non-splice signal at Cohen's $d\!=\!-0.190$ against a chr22 per-position background, on a scale where the splice-donor reference reaches $-0.433$. GTEx eQTLs~\cite{gtex2020} ($d\!=\!-0.022$) and GWAS Catalog SNPs~\cite{sollis2023gwas} ($d\!=\!-0.040$) shift in the same direction but with biologically marginal magnitudes. The 5$'$~UTR shift is reported separately: at 5$'$~UTR, $c(t)$ couples strongly with next-token entropy ($\rho\!=\!+0.41$ vs.\ $|\rho|\!\le\!0.15$ elsewhere; \S\ref{sec:discussion}), so it cannot be compared on the same axis as the entropy-controlled splice and cCRE-ELS signals.
 
 \textbf{Entropy does not explain the splice signal.} A natural concern is that $c(t)$ merely tracks the per-position next-token Shannon entropy $H_t$ of the model. On a control panel of $120$ random chr22 windows ($720{,}000$ positions) we compute $H_t$ from the post-norm logits and find an overall Spearman $\rho(c, H_t)\!=\!-0.079$ (per-context $|\rho|\!\le\!0.15$ except $5'$~UTR; \S\ref{sec:discussion}). On the same chr22 panel the splice-donor-versus-intron Cohen's $d$ is $-0.452$; after regressing $c$ on $H_t$ and re-measuring on the residual it strengthens to $-0.583$. Next-token entropy therefore does not explain the splice depth ordering.
 
@@ -185,16 +187,16 @@ Settling depth is not simply a meter of motif intrinsic strength. We dissociate 
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=0.95\textwidth]{figures/fig_shallowness.png}
-\caption{Splice and enhancer annotations shift toward shallower settling. \textbf{(a)} Per-context mean settling depth $\bar c$ pooled over chr17 (validation, frozen $\gamma_{\cos}\!=\!0.397$) and chr22 (calibration). Splice donor and acceptor (blue) sit $\sim 2$ layers below the intron baseline (red dashed). The asterisk on ``5$'$~UTR$^*$'' marks the entropy-confounded context discussed in \S\ref{sec:discussion}; it is reported for completeness but excluded from the headline hierarchy. Right of each bar: Cohen's $d$ versus the intron baseline with significance label (Mann--Whitney; $\,*$, $**$, $***$, $****$ at $0.05$, $0.01$, $10^{-3}$, $10^{-4}$). \textbf{(b)} Cohen's $d$ versus a chr22 per-position background for splice donor (reference; $-0.433$), ENCODE cCRE-ELS ($-0.190$), GTEx eQTL ($-0.022$) and GWAS Catalog ($-0.040$). The cCRE-ELS effect is measurable; SNP-level eQTL/GWAS annotations are directionally consistent but biologically marginal.}
+\caption{Splice and enhancer annotations shift toward shallower settling. \textbf{(a)} Per-context mean settling depth $\bar c$ pooled over chr17 (validation, frozen $\gamma_{\cos}\!=\!0.397$) and chr22 (calibration). Splice donor and acceptor (blue) sit $\sim 2$ layers below the intron baseline (red dashed). The asterisk on ``5$'$~UTR$^*$'' marks an entropy-coupled context (\S\ref{sec:discussion}) reported separately from the entropy-controlled hierarchy. Right of each bar: Cohen's $d$ versus the intron baseline (Mann--Whitney significance: $\,*$, $**$, $***$, $****$ at $0.05$, $0.01$, $10^{-3}$, $10^{-4}$). \textbf{(b)} Cohen's $d$ versus a chr22 per-position background for splice donor (reference; $-0.433$), ENCODE cCRE-ELS ($-0.190$), GTEx eQTL ($-0.022$) and GWAS Catalog ($-0.040$). cCRE-ELS gives a measurable enhancer signal; SNP-level eQTL/GWAS shifts are directionally consistent but biologically marginal.}
 \label{fig:shallowness}
 \end{figure*}
 
 \subsection{Variant disruptions peak at consequence-specific layers}
 \label{sec:variant-disruption}
 
-For variants, we use the layer at which $|\DDcos|$ peaks as a depth probe: it asks where the residual trajectory changes most between reference and alternate sequence. This is not a clinical scorer claim. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort with cached SNV features and a newly forwarded indel panel. Variants are class-stratified by ClinVar molecular-consequence (\textsc{mc}) priority, in decreasing order: canonical-splice, nonsense, frameshift, missense, synonymous, intron.
+For variants, we use the layer at which $|\DDcos|$ peaks as a depth probe: it asks at which layer the residual trajectory changes most between reference and alternate sequence -- a depth signature, not a pathogenicity score. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort with cached SNV features and a newly forwarded indel panel, class-stratified by ClinVar molecular-consequence (\textsc{mc}) priority, in decreasing order: canonical-splice, nonsense, frameshift, missense, synonymous, intron.
 
-Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}), differing across the six classes at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. Adjacent-pair Dunn--Bonferroni tests~\cite{mann1947whitney,benjamini1995fdr} highlight the largest jump as nonsense $\to$ missense ($p_{\mathrm{adj}}\!<\!10^{-3}$); the remaining adjacent gaps fall within noise at these sample sizes ($n\!=\!32$--$1{,}740$). Thus the strongest supported claim is a population-level shift from early-truncating consequences toward deeper missense/splice disruptions, not clean separability of every adjacent class.
+Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}), with the six classes differing at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. Adjacent-pair Dunn--Bonferroni tests~\cite{mann1947whitney,benjamini1995fdr} resolve the nonsense $\to$ missense step ($p_{\mathrm{adj}}\!<\!10^{-3}$), while the remaining adjacent gaps are bounded by per-class sample size ($n\!=\!32$--$1{,}740$). The interpretable result is therefore a population-level depth shift from early-truncating consequences toward missense and splice disruptions.
 
 \begin{figure}[!t]
 \centering
@@ -203,7 +205,7 @@ Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense
 \label{fig:variants}
 \end{figure}
 
-As a sanity check on the trajectory's information content, a logistic regression on the full 32-dimensional $\DDcos$ trajectory reaches 10-fold stratified AUROC $0.844$ on the $8{,}008$ ClinVar P/LP-vs-B/LB cohort, against $0.729$ for the best single-layer tap; full per-feature numbers, DeLong~\cite{delong1988comparing} pairwise tests, the per-layer ablation, and the four-panel ROC/DeLong/per-gene figure are deferred to App.~\ref{app:auroc-detail} (Tables~\ref{tab:auroc}, \ref{tab:per-layer}; Fig.~\ref{fig:auroc}). We do not benchmark \gDTR{} against AlphaMissense~\cite{cheng2023alphamissense}, SpliceAI~\cite{jaganathan2019spliceai}, or CADD~\cite{rentzsch2019cadd} in the main text because the contribution here is a layer-resolved interpretability axis, not a replacement variant scorer.
+As a sanity check on trajectory information content, a logistic regression on the full 32-dimensional $\DDcos$ trajectory reaches 10-fold stratified AUROC $0.844$ on the $8{,}008$ ClinVar P/LP-vs-B/LB cohort, against $0.729$ for the best single-layer tap. Per-gene leave-one-out AUROC stays $\ge 0.77$ across the 14 evaluable genes, and DeLong~\cite{delong1988comparing} paired comparisons confirm that $\DDcos$ adds significant information beyond Evo~2 log-likelihood ($p\!=\!3.6\!\times\!10^{-15}$). The full panels, per-layer ablation, and AUROC summary are in App.~\ref{app:auroc-detail} (Tables~\ref{tab:auroc}, \ref{tab:per-layer}; Fig.~\ref{fig:auroc}). Comparison against task-specific variant scorers~\cite{cheng2023alphamissense,jaganathan2019spliceai,rentzsch2019cadd} is orthogonal to the layer-resolved interpretability question studied here.
 
 
 \subsection{Robustness and tokenisation limits}
@@ -236,7 +238,7 @@ MLM \scriptsize(NT-v2, DNABERT-2)            & no (per-window) & confounded \\
 \section{Discussion and limitations}
 \label{sec:discussion}
 
-Four caveats temper the interpretation. \emph{(i)} Settling depth is an internal correlational readout, not proof of a causal circuit. \emph{(ii)} At $5'$~UTR, $c(t)$ partially confounds with prediction entropy ($\rho\!=\!+0.41$ vs.\ $|\rho|\!\le\!0.15$ elsewhere), so we do not promote 5$'$~UTR as part of the headline hierarchy. \emph{(iii)} We control for next-token entropy but not yet for $k$-mer rarity, GC content, or dinucleotide composition; matched-composition controls are the most important next robustness check. \emph{(iv)} The cross-architecture comparison is limited by readout granularity: per-bp causal LMs can test splice positions directly, whereas $k$-mer/BPE MLMs yield only per-window estimates. Adding Caduceus~\cite{schiff2024caduceus} as a second per-position causal LM would help disentangle architecture from tokenisation.
+Four scope conditions frame the interpretation. \emph{(i)} Settling depth is a correlational readout of representational dynamics; establishing causal circuits will require interventional follow-up (e.g.\ activation patching, sparse-dictionary edits). \emph{(ii)} At $5'$~UTR alone, $c(t)$ correlates strongly with prediction entropy ($\rho\!=\!+0.41$ vs.\ $|\rho|\!\le\!0.15$ elsewhere); the 5$'$~UTR depth shift therefore reflects a mixture of representational stabilisation and prediction confidence and is reported as a separate, entropy-coupled effect. \emph{(iii)} The current entropy control isolates next-token uncertainty; $k$-mer rarity, GC content, and dinucleotide composition are natural next composition-matched controls. \emph{(iv)} Single-base splice resolution requires a per-bp causal LM. Adding Caduceus~\cite{schiff2024caduceus} as a second per-position causal model would disentangle architecture from tokenisation in the cross-architecture comparison.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
