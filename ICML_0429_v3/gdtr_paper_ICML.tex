@@ -17,6 +17,10 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,shapes.misc}
+% Map \sffamily to Helvetica (phv) so the TikZ schema in Fig 1(a) visually
+% matches the matplotlib raster in Fig 1(b), both rendering as a grotesk
+% sans-serif rather than the Computer-Modern default.
+\usepackage[scaled=0.95]{helvet}
 
 % Keep float-only pages from vertically centering figures with large blank tops.
 \makeatletter
@@ -188,7 +192,7 @@ Settling depth is not simply a meter of motif intrinsic strength. We dissociate 
 \subsection{Variant disruptions peak at consequence-specific layers}
 \label{sec:variant-disruption}
 
-For variants, we use the layer at which $|\DDcos|$ peaks as a depth probe: it asks where the residual trajectory changes most between reference and alternate sequence. This is not a clinical scorer claim. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort with cached SNV features and a newly forwarded indel panel. Variants are class-stratified using ClinVar \texttt{MC} priorities (canonical-splice $\succ$ nonsense $\succ$ frameshift $\succ$ missense $\succ$ synonymous $\succ$ intron).
+For variants, we use the layer at which $|\DDcos|$ peaks as a depth probe: it asks where the residual trajectory changes most between reference and alternate sequence. This is not a clinical scorer claim. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort with cached SNV features and a newly forwarded indel panel. Variants are class-stratified by ClinVar molecular-consequence (\textsc{mc}) priority, in decreasing order: canonical-splice, nonsense, frameshift, missense, synonymous, intron.
 
 Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}), differing across the six classes at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. Adjacent-pair Dunn--Bonferroni tests~\cite{mann1947whitney,benjamini1995fdr} highlight the largest jump as nonsense $\to$ missense ($p_{\mathrm{adj}}\!<\!10^{-3}$); the remaining adjacent gaps fall within noise at these sample sizes ($n\!=\!32$--$1{,}740$). Thus the strongest supported claim is a population-level shift from early-truncating consequences toward deeper missense/splice disruptions, not clean separability of every adjacent class.
 
