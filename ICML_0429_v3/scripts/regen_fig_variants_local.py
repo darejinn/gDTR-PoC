@@ -96,7 +96,7 @@ def main() -> None:
     ax.set_xlabel("argmax layer where $|\\Delta D_{cos}|$ peaks")
     ax.set_title(
         f"Variant consequence depth (Kruskal–Wallis $p$={kw_p:.1e})",
-        loc="left", fontsize=11)
+        loc="left", fontsize=14, fontweight="bold")
     ax.grid(axis="x", color="#dddddd", lw=0.5)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)

@@ -8,7 +8,18 @@
 
 % Recommended, but optional, packages for figures and better typesetting:
 \usepackage{microtype}
+\usepackage{afterpage}     % \afterpage{\clearpage} to flush a page early
 \usepackage{graphicx}
+
+% Relax LaTeX float-placement constraints so Fig.~\ref{fig:shallowness}
+% lands at the top of the page where Section~3 begins (rather than
+% being deferred a page later because of the default conservative
+% topfraction).
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.80}
+\renewcommand{\dbltopfraction}{0.92}
+\renewcommand{\dblfloatpagefraction}{0.80}
 \usepackage{subcaption}
 \usepackage{booktabs}      % professional tables
 \usepackage{multirow}
@@ -161,6 +172,19 @@ with $\runmin\,\Dcos(\ell,t) = \min_{k\le\ell}\Dcos(k,t)$. Lower $c(t)$ means ea
 
 \paragraph{Tuned-lens sanity check against frame mismatch.} A per-layer tuned-lens affine fit~\cite{belrose2023tunedlens} reaches $\ge 98\%$ MSE recovery on $30/32$ Evo~2 layers (canonical $L^\star\!=\!29$: $0.9996$; App.~\ref{app:tuned-lens}). This is a sanity check against gross norm-induced frame mismatch: the interior taps are linearly recoverable to the post-norm frame. The framework remains training-free because no affine weights are used at inference.
 
+% Force Fig.~\ref{fig:shallowness} to land at the TOP of the page
+% where Section~3 begins. The figure* source is placed BEFORE the
+% \section so the [!t] float can occupy the very top of that page,
+% with \afterpage{\clearpage} flushing the previous page early.
+\afterpage{\clearpage}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_shallowness.png}
+\caption{Splice and enhancer annotations shift toward shallower settling. \textbf{(a)} Per-context mean settling depth $\bar c$ pooled over chr17 (validation, frozen $\gamma_{\cos}\!=\!0.397$) and chr22 (calibration). Splice donor and acceptor (blue) sit $\sim 2$ layers below the intron baseline (red dashed). The asterisk on ``5$'$~UTR$^*$'' marks an entropy-coupled context (\S\ref{sec:discussion}) reported separately from the entropy-controlled hierarchy. Right of each bar: Cohen's $d$ versus the intron baseline (Mann--Whitney significance: $\,*$, $**$, $***$, $****$ at $0.05$, $0.01$, $10^{-3}$, $10^{-4}$). \textbf{(b)} Cohen's $d$ versus a chr22 per-position background for splice donor (reference; $-0.433$), ENCODE cCRE-ELS ($-0.190$), GTEx eQTL ($-0.022$) and GWAS Catalog ($-0.040$). cCRE-ELS gives a measurable enhancer signal; SNP-level eQTL/GWAS shifts are directionally consistent but biologically marginal.}
+\label{fig:shallowness}
+\end{figure*}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 3. BIOLOGICAL UTILITY
@@ -175,19 +199,12 @@ We first test whether $c(t)$ delivers a biologically meaningful, transferable re
 
 \textbf{Context-level ordering.} On canonical genomic contexts (Fig.~\ref{fig:shallowness}a), splice donor and acceptor sites settle $\sim 2$ layers earlier than the intronic baseline, and the remaining contexts cluster near or above it. Effect sizes are reported as Cohen's $d$ throughout; Mann--Whitney $p$-values are dominated by the $\sim\!10^7$ pooled positions and act only as significance sanity checks. Among the regulatory annotations (Fig.~\ref{fig:shallowness}b), ENCODE cCRE-ELS enhancer-like elements~\cite{moore2020encode} are the clearest non-splice signal at Cohen's $d\!=\!-0.190$ against a chr22 per-position background, on a scale where the splice-donor reference reaches $-0.433$. GTEx eQTLs~\cite{gtex2020} ($d\!=\!-0.022$) and GWAS Catalog SNPs~\cite{sollis2023gwas} ($d\!=\!-0.040$) shift in the same direction but with biologically marginal magnitudes. The 5$'$~UTR shift is reported separately: at 5$'$~UTR, $c(t)$ couples strongly with next-token entropy ($\rho\!=\!+0.41$ vs.\ $|\rho|\!\le\!0.15$ elsewhere; \S\ref{sec:discussion}), so it cannot be compared on the same axis as the entropy-controlled splice and cCRE-ELS signals.
 
-\textbf{Entropy does not explain the splice signal.} A natural concern is that $c(t)$ merely tracks the per-position next-token Shannon entropy $H_t$ of the model. On a control panel of $120$ random chr22 windows ($720{,}000$ positions) we compute $H_t$ from the post-norm logits and find an overall Spearman $\rho(c, H_t)\!=\!-0.079$ (per-context $|\rho|\!\le\!0.15$ except $5'$~UTR; \S\ref{sec:discussion}). On the same chr22 panel the splice-donor-versus-intron Cohen's $d$ is $-0.452$; after regressing $c$ on $H_t$ and re-measuring on the residual it strengthens to $-0.583$. Next-token entropy therefore does not explain the splice depth ordering.
+\textbf{Entropy does not explain the splice signal.} A natural concern is that $c(t)$ merely tracks the per-position next-token Shannon entropy $H_t$ of the model. On a control panel of $120$ random chr22 windows ($720{,}000$ positions) we compute $H_t$ from the post-norm logits and find an overall Spearman $\rho(c, H_t)\!=\!-0.079$ (per-context $|\rho|\!\le\!0.15$ except $5'$~UTR; \S\ref{sec:discussion}; full per-context numbers in Tab.~\ref{tab:entropy-decoup}, App.~\ref{app:entropy-decoup}). On the same chr22 panel the splice-donor-versus-intron Cohen's $d$ is $-0.452$; after regressing $c$ on $H_t$ and re-measuring on the residual it strengthens to $-0.583$. Next-token entropy therefore does not explain the splice depth ordering.
 
 \subsection{Motif edits separate detection from flanking context}
 \label{sec:motif-controls}
 
 Settling depth is not simply a meter of motif intrinsic strength. We dissociate central motif detection from flanking-context integration on $1{,}000$ canonical GT-AG donors (chr22, $\pm 10$~bp pad-averaged $c$). Real donors settle at $\bar c\!=\!26.77$. (i) Replacing the central GT with AA, while preserving the entire $\pm 100$~bp flank, deepens $\bar c$ by $0.46$ layers (Cohen's $d\!=\!-0.09$, paired Wilcoxon $p\!=\!2.3\!\times\!10^{-32}$), consistent with a small but reliable signal carried by the canonical dinucleotide. (ii) Dinucleotide-shuffling the $\pm 100$~bp flank while preserving the central GT \emph{shallows} $\bar c$ by $3.18$ layers ($d\!=\!+0.51$, $p\!=\!4.1\!\times\!10^{-59}$): the isolated GT becomes easier to stabilise, whereas the real donor context requires deeper flanking-grammar integration. The within-splice motif breakdown in App.~\ref{app:splice-canonical} follows the same cautionary logic: rare or non-canonical motifs can settle earlier than canonical GC-AG, so $c(t)$ should be interpreted as detection plus context integration, not as motif strength alone.
-
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=0.95\textwidth]{figures/fig_shallowness.png}
-\caption{Splice and enhancer annotations shift toward shallower settling. \textbf{(a)} Per-context mean settling depth $\bar c$ pooled over chr17 (validation, frozen $\gamma_{\cos}\!=\!0.397$) and chr22 (calibration). Splice donor and acceptor (blue) sit $\sim 2$ layers below the intron baseline (red dashed). The asterisk on ``5$'$~UTR$^*$'' marks an entropy-coupled context (\S\ref{sec:discussion}) reported separately from the entropy-controlled hierarchy. Right of each bar: Cohen's $d$ versus the intron baseline (Mann--Whitney significance: $\,*$, $**$, $***$, $****$ at $0.05$, $0.01$, $10^{-3}$, $10^{-4}$). \textbf{(b)} Cohen's $d$ versus a chr22 per-position background for splice donor (reference; $-0.433$), ENCODE cCRE-ELS ($-0.190$), GTEx eQTL ($-0.022$) and GWAS Catalog ($-0.040$). cCRE-ELS gives a measurable enhancer signal; SNP-level eQTL/GWAS shifts are directionally consistent but biologically marginal.}
-\label{fig:shallowness}
-\end{figure*}
 
 \subsection{Variant disruptions peak at consequence-specific layers}
 \label{sec:variant-disruption}
@@ -198,7 +215,10 @@ Argmax-layer medians order \emph{intron $<$ frameshift $<$ nonsense $<$ missense
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.98\columnwidth]{figures/fig_variants.png}
+% Use the local-regen version (bold + larger title); the full-distribution
+% PNG produced on the H200 (figures/fig_variants.png) keeps the same name
+% — re-run scripts/make_v3_figures_remote.py + sync to refresh.
+\includegraphics[width=0.98\columnwidth]{figures/fig_variants_local.png}
 \caption{Variant consequences peak at different disruption layers. Argmax layer of $|\DDcos|$ across $4{,}023$ ClinVar P/LP variants in 15 cancer-associated genes, grouped by molecular consequence; class-median layer in red. Kruskal--Wallis 6-way $p\!=\!3.0\!\times\!10^{-10}$; the largest adjacent jump is nonsense $\to$ missense ($p_{\mathrm{adj}}\!<\!10^{-3}$). The broad overlap emphasises a population-level depth shift, not class separation.}
 \label{fig:variants}
 \end{figure}
@@ -347,6 +367,45 @@ $0.35$ & $5.10$ & $5.21$ & $5.24$ & $5.23$ & $5.18$ \\
 $0.40$ & $5.16$ & $5.25$ & $\mathbf{5.28}$ & $\mathbf{5.26}$ & $5.21$ \\
 $0.45$ & $5.13$ & $5.22$ & $5.25$ & $5.24$ & $5.19$ \\
 $0.50$ & $5.08$ & $5.17$ & $5.20$ & $5.19$ & $5.14$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Entropy decoupling per context}
+\label{app:entropy-decoup}
+
+Table~\ref{tab:entropy-decoup} reports per-context Spearman $\rho(c,
+H_t)$ on a $120$-window chr22 control panel ($720{,}000$ positions), where
+$H_t$ is the per-position next-token Shannon entropy from the post-norm
+logits. The overall correlation is small and slightly negative
+($\rho\!=\!-0.079$); per-context correlations stay $|\rho|\!\leq\!0.15$
+for every context except 5$'$~UTR ($\rho\!=\!+0.41$). After regressing
+$c$ on $H_t$ on the same chr22 panel, the splice-donor-versus-intron
+Cohen's $d$ \emph{strengthens} from $-0.452$ to $-0.583$ on the
+residual, confirming that next-token entropy does not explain the
+splice depth ordering.
+
+\begin{table}[!htbp]
+\caption{Per-context Spearman correlation between settling depth $c(t)$
+and next-token entropy $H_t$ on the chr22 control panel
+($120$ windows, $720{,}000$ positions). 5$'$~UTR is the only
+entropy-coupled context.}
+\label{tab:entropy-decoup}
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Context & $n$ & $\bar c$ & $\bar H_t$ & $\rho(c, H_t)$ \\
+\midrule
+intergenic        & $243{,}956$ & $28.94$ & $0.795$ & $-0.024$ \\
+intron            & $425{,}131$ & $28.03$ & $1.030$ & $-0.108$ \\
+coding exon       & $\phantom{0}36{,}427$ & $28.61$ & $0.744$ & $-0.080$ \\
+3$'$ UTR          & $\phantom{00}8{,}238$ & $27.61$ & $1.073$ & $-0.028$ \\
+splice donor      & $\phantom{00}1{,}981$ & $25.04$ & $0.887$ & $-0.083$ \\
+splice acceptor   & $\phantom{00}1{,}920$ & $27.33$ & $0.764$ & $-0.152$ \\
+\textbf{5$'$ UTR} & $\phantom{00}2{,}347$ & $31.43$ & $1.121$ & $\mathbf{+0.414}$ \\
+\midrule
+overall           & $719{,}000$ & --- & --- & $-0.079$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -663,19 +722,52 @@ $\pm 200$\,bp. On chr22 both donor and acceptor minima sit at coordinate
 $0$ ($\bar c\!=\!23.65$ and $23.64$ respectively). The asymmetry --- donor
 minimum exonic-side, acceptor minimum intronic-side --- mirrors the
 asymmetric splice-grammar features (branch point, polypyrimidine tract)
-that lie predominantly on the intronic side of acceptors.
+that lie predominantly on the intronic side of acceptors. The full
+positional profile is shown in Fig.~\ref{fig:splice-fine}; the per-side
+minima are summarised in Table~\ref{tab:splice-fine}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/fig_splice_fine.png}
+\caption{Mean settling depth $\bar c$ as a function of distance to the
+nearest splice donor / acceptor, computed on the pooled chr17 + chr22
+analysis windows. Both profiles dip well below the intronic baseline
+($\bar c\!=\!27.72$, red dashed) within $\pm 200$\,bp; donors minimise
+on the exonic side, acceptors on the intronic side, mirroring the
+asymmetric splice-grammar context (branch point and polypyrimidine
+tract on the intronic side of acceptors). Source data:
+\texttt{results/phase1.6\_sub/splice\_distance\_profile.json}.}
+\label{fig:splice-fine}
+\end{figure}
+
+\begin{table}[!htbp]
+\caption{Per-side minima of the splice positional fine-profile.
+Pooled chr17 + chr22 analysis windows; positions measured from the
+splice junction. Donor exonic-side / acceptor intronic-side minima
+recapitulate the asymmetric splice-grammar context.}
+\label{tab:splice-fine}
+\centering
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Side & arg-min position & $\bar c$ at min & $\bar c$ at $-100$\,bp
+   & $\bar c$ at $+100$\,bp & $n$ \\
+\midrule
+splice donor    & $+20$\,bp & $23.65$ & $26.05$ & $25.65$ & $280{,}944$ \\
+splice acceptor & $+50$\,bp & $23.64$ & $26.01$ & $24.50$ & $278{,}955$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Canonical vs.\ non-canonical splice motif breakdown}
 \label{app:splice-canonical}
 
 A finer dissection by motif class -- using the genomic dinucleotides
 immediately downstream of the donor and upstream of the acceptor ---
-reveals an unexpected ordering: \emph{non-canonical} splice donors
-(AT-AC and other rare motifs, pooled $\bar c\!=\!25.13$,
-$n\!=\!5{,}977$) converge \emph{earlier} than the dominant canonical
-GT-AG donors ($\bar c\!=\!25.79$, $n\!=\!350{,}552$), while the minor
-canonical GC-AG class is the deepest of the three
-($\bar c\!=\!27.01$, $n\!=\!5{,}165$). The shallower-than-intron pattern
+reveals an unexpected ordering (Table~\ref{tab:splice-canonical}):
+\emph{non-canonical} splice donors converge \emph{earlier} than the
+dominant canonical GT-AG donors, while the minor canonical GC-AG class
+is the deepest of the three. The shallower-than-intron pattern
 ($\bar c\!=\!27.72$) holds for every splice class, but the within-class
 ordering is the opposite of a naive ``stronger motif $\Rightarrow$
 shallower recognition'' prior. The Cohen's $d$ between canonical GT-AG
@@ -685,6 +777,60 @@ non-canonical introns~\cite{wang2008splicecode,burge1998u12}; we
 report the magnitudes honestly rather than over-interpret. The finding
 replicates qualitatively on the 8-layer HyenaDNA-large at depth-normalised
 scale.
+
+\begin{table}[!htbp]
+\caption{Within-splice motif breakdown by donor dinucleotide. The
+shallower-than-intron pattern ($\bar c\!=\!27.72$) holds for every
+splice class, but the within-class ordering is the opposite of a naive
+``stronger motif $\Rightarrow$ shallower recognition'' prior:
+non-canonical donors converge earliest, GC-AG latest.}
+\label{tab:splice-canonical}
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Donor motif class & $n$ & $\bar c$ & vs.\ canonical GT-AG \\
+\midrule
+non-canonical (AT-AC, other) & $\phantom{00}5{,}977$ & $25.13$ & $d\approx -0.05$ (shallower) \\
+canonical GT-AG (dominant)   & $350{,}552$ & $25.79$ & --- (reference) \\
+canonical GC-AG (minor)      & $\phantom{00}5{,}165$ & $27.01$ & $d\approx +0.10$ (deeper) \\
+\midrule
+intron baseline              & $\sim\!10^7$           & $27.72$ & --- (deeper than every class) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Motif and flank perturbation summary}
+\label{app:motif-flank}
+
+Table~\ref{tab:motif-flank} summarises the motif-edit and flank-shuffle
+controls of \S\ref{sec:motif-controls}. On $1{,}000$ canonical GT-AG
+donors (chr22, $\pm 10$\,bp pad-averaged $c$) the central GT motif
+contributes a small but reliable detection signal ($\bar c$ deepens by
+$0.46$ layers when GT is replaced with AA), whereas dinucleotide-shuffling
+the $\pm 100$\,bp flank shallows $\bar c$ by $3.18$ layers, isolating the
+GT for easier stabilisation. Real flanking grammar therefore demands
+deeper integration than the central motif on its own.
+
+\begin{table}[!htbp]
+\caption{Motif-edit and flank-shuffle controls on 1{,}000 canonical
+GT-AG donors. Real $\bar c\!=\!26.77$. Replacing the central GT with AA
+(while keeping the flank) deepens $\bar c$; shuffling the flank
+(while keeping GT) \emph{shallows} $\bar c$ by 3.18 layers. Source data:
+\texttt{results/exp2\_shuffled\_meta.json}.}
+\label{tab:motif-flank}
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Condition & $\bar c$ & $\Delta \bar c$ vs.\ real & Cohen's $d$ & paired Wilcoxon $p$ \\
+\midrule
+real GT-AG donor (reference)             & $26.77$ & $0$ (ref.)   & ---     & --- \\
+GT $\to$ AA, flank preserved             & $27.24$ & $+0.46$      & $-0.086$ & $2.3\!\times\!10^{-32}$ \\
+GT preserved, $\pm 100$\,bp flank shuffled & $23.59$ & $\mathbf{-3.18}$ & $\mathbf{+0.515}$ & $4.1\!\times\!10^{-59}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % APPENDIX E — Reproducibility (now last)
