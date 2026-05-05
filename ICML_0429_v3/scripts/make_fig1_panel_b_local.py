@@ -111,6 +111,13 @@ def main() -> None:
     setup_style()
     fig, ax = plt.subplots(figsize=(7.4, 3.6))
 
+    # Shaded "settled zone" (below gamma) — visualises m_ell <= gamma
+    ax.axhspan(0.30, GAMMA, color=RED, alpha=0.07, zorder=0)
+    ax.text(1.5, GAMMA - 0.03,
+            "settled zone ($m_\\ell\\leq\\gamma$)",
+            color="#993333", fontsize=8, style="italic",
+            va="top", zorder=0)
+
     # gamma threshold (drawn first so traces sit on top of it)
     ax.axhline(GAMMA, color=RED, ls="--", lw=1.0, zorder=1,
                label=f"$\\gamma_{{\\cos}}={GAMMA:.3f}$")
@@ -143,6 +150,22 @@ def main() -> None:
                lw=0.8, zorder=6)
     ax.scatter([31], [GAMMA], s=110, color=GREY, edgecolor="black",
                lw=0.8, zorder=6)
+
+    # Settling-depth callouts: vertical dotted line from the x-axis up
+    # to the crossing marker, plus a "c=22" / "c=31" label just under
+    # the x-axis. Makes c(t) read as a layer-axis coordinate.
+    ax.plot([22, 22], [0.30, GAMMA], color=BLUE, ls=":", lw=1.0,
+            zorder=2)
+    ax.annotate("$c=22$", xy=(22, 0.30), xytext=(22, 0.265),
+                ha="center", va="top", fontsize=9,
+                fontweight="bold", color=BLUE,
+                annotation_clip=False)
+    ax.plot([31, 31], [0.30, GAMMA], color=GREY, ls=":", lw=1.0,
+            zorder=2)
+    ax.annotate("$c=31$", xy=(31, 0.30), xytext=(31, 0.265),
+                ha="center", va="top", fontsize=9,
+                fontweight="bold", color=GREY,
+                annotation_clip=False)
 
     ax.set_xlim(0.5, 32.5)
     ax.set_ylim(0.30, 1.30)
