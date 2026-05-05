@@ -119,6 +119,14 @@
 % Panel (b) title (top-left, matches panel (a) style).
 \node[panel] at (-0.85, 2.00) {(b) Example settling trajectories};
 
+% --- shaded "settled" zone (below gamma): drawn FIRST so traces and
+%     ticks render on top. Light pink to indicate "m_l <= gamma" ---
+\fill[red!7]
+  (0, 0)
+  rectangle ({(\xmax - \xmin) * \xs}, {(\gammaval - \ymin) * \ys});
+\node[anchor=south west, font=\sffamily\scriptsize\itshape, text=red!50!black]
+  at (0.10, 0.05) {settled zone ($m_\ell\leq\gamma$)};
+
 % --- y-axis ticks + horizontal grid (light) ---
 \foreach \y/\lab in {0.40/0.4, 0.60/0.6, 0.80/0.8, 1.00/1.0, 1.20/1.2}{
   \draw[black!35, very thin] (0, {(\y - \ymin) * \ys})
@@ -303,6 +311,23 @@
   };
 \filldraw[black!65, draw=black, line width=0.3pt]
   ({(31-\xmin)*\xs},{(0.397-\ymin)*\ys}) circle (0.10);
+
+% --- settling-depth callouts: vertical dashed line from x-axis to the
+%     crossing marker + "c=22" / "c=31" labels just BELOW the x-axis,
+%     so the reader sees that c(t) is a layer-axis coordinate ---
+\draw[blue!75!black, dotted, line width=0.6pt]
+  ({(22-\xmin)*\xs}, 0)
+  -- ({(22-\xmin)*\xs}, {(0.397-\ymin)*\ys});
+\node[anchor=north, font=\sffamily\scriptsize\bfseries, text=blue!75!black]
+  at ({(22-\xmin)*\xs}, -0.18)
+  {$c\!=\!22$};
+
+\draw[black!65, dotted, line width=0.6pt]
+  ({(31-\xmin)*\xs}, 0)
+  -- ({(31-\xmin)*\xs}, {(0.397-\ymin)*\ys});
+\node[anchor=north, font=\sffamily\scriptsize\bfseries, text=black!65]
+  at ({(31-\xmin)*\xs}, -0.18)
+  {$c\!=\!31$};
 
 % --- legend OUTSIDE plot (right margin), no fill, plot itself is now
 %     unobstructed. 1-column × 5 rows; total width ~3.4 cm. ---

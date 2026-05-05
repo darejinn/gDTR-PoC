@@ -1,122 +1,183 @@
-# ICML 2026 workshop short paper — gDTR (revision v11, 2026-05-05)
+# ICML 2026 workshop short paper — gDTR (v11.5, 2026-05-05)
 
-This folder is the **current canonical** ICML 2026 workshop submission for
-**Paper 1 — gDTR (mechanistic probe)**.
+> **Title.** gDTR: Layer-wise Settling Depth Reveals Biological Grammar
+> in Genomic Foundation Models.
+> **Length.** 4-page main body + references + 9-page appendix
+> (= 13 pages total).
+> **Status.** Canonical ICML 2026 workshop submission, Paper 1 of the
+> two-paper split.
 
-> **Title.** gDTR: Layer-wise Settling Depth Reveals Biological Grammar in
-> Genomic Foundation Models.
-> **Length.** 4-page main body + references + appendix (12 pages total).
+This folder is self-contained for the LaTeX build; figure regeneration
+is described below and in detail in [`MANIFEST.md`](MANIFEST.md).
 
-For the version-history map of the whole repository (including the original
-`ICML_0429_v1 2/` folder, the DOCX iterations, and the companion Paper 2
-ΔH split), see the top-level [`VERSIONS.md`](../VERSIONS.md).
+---
 
-## Files
+## Quick start
 
-| Path | Purpose |
-|---|---|
-| `gdtr_paper_ICML.tex` | Main LaTeX source (single file). |
-| `gdtr_paper_ICML.pdf` | Built PDF (12 pages). |
-| `gdtr_paper.bib` | Bibliography. |
-| `figures/fig1_schema.tex` | TikZ source for Fig. 1(a) pipeline schematic. |
-| `figures/fig1_trajectory.png` | Pre-rendered Fig. 1(b) trajectory plot. |
-| `figures/fig_shallowness.{png,pdf}` | Fig. 2 — splice/cCRE shallowness. |
-| `figures/fig_variants.{png,pdf}` | Fig. 3 — variant consequence depth shifts. |
-| `figures/fig_appendix_b.png` | Fig. 4 — per-context bars across four models. |
-| `figures/fig_crossarch.{png,pdf}` | Fig. 5 — cross-architecture two-tier structure. |
-| `figures/fig_auroc.png` | Fig. 6 — variant AUROC four-panel diagnostics. |
-| `MANIFEST.md` | **Per-figure / per-table mapping** (what produces what). Start here. |
-| `scripts/make_v3_figures_remote.py` | Master figure regeneration (runs on H200). |
-| `scripts/regen_fig_shallowness_local.py` | Fig. 2 — local regen from `fig_v9_meta.json`. |
-| `scripts/regen_fig_variants_local.py` | Fig. 3 — local summary regen from `fig_v9_meta.json`. |
-| `scripts/regen_fig_appendix_b_local.py` | Fig. 4 — local regen from `phase4/per_model_summary.json`. |
-| `scripts/regen_fig_auroc_local.py` | Fig. 6 — local regen from Tier-1 baseline JSON / per-layer CSV. |
-| `scripts/make_fig1_trajectory_local.py` | Crops the Fig. 1(b) trajectory PNG locally. |
-| `scripts/redraw_fig1_panel_a_local.py` | Legacy raster schematic (superseded by `fig1_schema.tex`). |
-| `icml2026.sty`, `icml2026.bst` | ICML 2026 style files (do not modify). |
-| `algorithm.sty`, `algorithmic.sty`, `fancyhdr.sty` | Style dependencies. |
-| `gdtr_paper_all_sources/` | Original v1 source backup, kept for diff/audit. |
-| `gdtr_paper_manuscript.tex`, `gdtr_paper_manuscript_plaintext.tex`, `gdtr_paper.tex` | Earlier-revision drafts kept for diff. |
-| `V3_REWRITE_NOTES.md` | Narrative log of the v1→v3 rewrite (2026-04-28). |
-
-## Build
+### Build the PDF
 
 ```bash
 cd ICML_0429_v3
 latexmk -pdf -interaction=nonstopmode -halt-on-error gdtr_paper_ICML.tex
 ```
 
-The build is self-contained: TeX Live 2024+ with `pdftex`, the included
-ICML 2026 style files, and standard packages (`microtype`, `graphicx`,
-`subcaption`, `booktabs`, `siunitx`, `tikz`, `hyperref`, `cleveref`).
-No internet or model weights required for the build itself.
+Self-contained build: TeX Live 2024+ with `pdftex`, the included ICML
+2026 style files, and standard packages (`microtype`, `graphicx`,
+`subcaption`, `booktabs`, `siunitx`, `tikz`, `afterpage`, `hyperref`,
+`cleveref`). No model weights or internet required for the build.
 
-## Reproducibility — figure regeneration
-
-See `MANIFEST.md` for the canonical figure-by-figure mapping (script →
-input data → output path). Two domains:
-
-**Local (no GPU).** Five of the six raster figures rebuild from the
-JSON/CSV summaries vendored under `../results/`:
+### Regenerate every figure locally (no GPU)
 
 ```bash
-python scripts/regen_fig_shallowness_local.py   # Fig 2
-python scripts/regen_fig_variants_local.py      # Fig 3 (summary form)
-python scripts/regen_fig_appendix_b_local.py    # Fig 4
-python scripts/regen_fig_auroc_local.py         # Fig 6
-python scripts/make_fig1_trajectory_local.py    # Fig 1(b) crop
+python scripts/make_fig1_panel_b_local.py    # Fig 1(b) — schematic trajectories
+python scripts/regen_fig_shallowness_local.py # Fig 2 — splice/cCRE shallowness
+python scripts/regen_fig_variants_local.py    # Fig 3 — variant boxplot summary
+python scripts/regen_fig_appendix_b_local.py  # Fig 4 — per-context FM bars
+python scripts/regen_fig_auroc_local.py       # Fig 6 — variant AUROC panels
 ```
 
-Fig. 1(a) is pure TikZ (`figures/fig1_combined.tex`) and rebuilds with
-`latexmk`. Fig. 5 (`fig_crossarch`) is also locally renderable via
-`make_v3_figures_remote.py::fig_crossarch()` — it reads only the small
-`results/phase4/concordance_matrix.json`.
+Fig 1(a) is pure TikZ (rebuilds with `latexmk`). Fig 5 reads only the
+locally-vendored `phase4/concordance_matrix.json` and rebuilds via
+`make_v3_figures_remote.py::fig_crossarch()` — works without H200.
 
-**Remote (H200, full per-position regen).**
+### Regenerate from real per-position data (H200 only)
 
 ```bash
 ssh digitalocean-gpu
 cd ~/gDTR
 GDTR_ROOT=$PWD ./venv/bin/python scripts/make_v3_figures_remote.py
 # → results/figures_v3_workshop/{fig1_v10,fig_shallowness,fig_variants,fig_crossarch}.{png,pdf}
+rsync -avz digitalocean-gpu:~/gDTR/results/figures_v3_workshop/ figures/
 ```
 
-The H200 path consumes the full feature caches described in Appendix E
-(GENCODE v44, ENCODE SCREEN cCRE-ELS, ClinVar 2026-04-18, etc.).
+---
 
-## Font conventions
+## "Where is the code that produced X?"
 
-- Body text: Times (icml2026.sty -> `ptm`).
-- Fig. 1(a) TikZ schematic: `\sffamily` (sans-serif), chosen to match
-  the matplotlib raster panel (b) without requiring a remote regen.
-- Fig. 1(b) and all other matplotlib outputs: `font.family: serif` is
-  set in `make_v3_figures_remote.py`. Re-running the script will produce
-  serif-matched panels; the currently shipped PNG predates that change.
+| Output (in PDF) | Render script | Upstream pipeline |
+|---|---|---|
+| Fig 1(a) pipeline schema | [`figures/fig1_combined.tex`](figures/fig1_combined.tex) (TikZ) | — |
+| Fig 1(b) example trajectories | [`scripts/make_fig1_panel_b_local.py`](scripts/make_fig1_panel_b_local.py) (schematic) / [`scripts/make_v3_figures_remote.py::fig1`](scripts/make_v3_figures_remote.py) (real, H200) | `phase1.6/chr22_cache.h5` (H200) |
+| Fig 2 splice/cCRE shallowness | [`scripts/regen_fig_shallowness_local.py`](scripts/regen_fig_shallowness_local.py) | `p1a/calib_val_table.csv`, `p3b1/p3b1_func_pos.json` |
+| Fig 3 variant boxplot | [`scripts/regen_fig_variants_local.py`](scripts/regen_fig_variants_local.py) (summary) / [`make_v3_figures_remote.py::fig_variants`](scripts/make_v3_figures_remote.py) (full) | `p2/variants_features_classed.csv`, `p2_indel/variants_features_indel.csv` |
+| Fig 4 per-context FM bars | [`scripts/regen_fig_appendix_b_local.py`](scripts/regen_fig_appendix_b_local.py) | `phase4/per_model_summary.json` |
+| Fig 5 cross-arch two-tier | [`scripts/make_v3_figures_remote.py::fig_crossarch`](scripts/make_v3_figures_remote.py) | `phase4/concordance_matrix.json` |
+| Fig 6 variant AUROC | [`scripts/regen_fig_auroc_local.py`](scripts/regen_fig_auroc_local.py) | `tier1_baselines/baseline_auroc.json`, `tier1_per_layer/per_layer_auroc.csv` |
+| Fig (App.D.1) splice fine-profile | rendered PDF copied: `figures/fig_splice_fine.{pdf,png}` | `phase1.6_sub/F_splice_distance_profile.{pdf,png}` |
 
-## What changed in v11 (vs v10 / v3 first build)
+For per-table data sources and the local-vs-H200 split, see
+[`MANIFEST.md`](MANIFEST.md).
 
-See `V3_REWRITE_NOTES.md` for the v1→v3 narrative restructure
-(2026-04-28). The 2026-05-05 v11 polish on top of v3:
+For a script catalog with inputs/outputs, see [`scripts/README.md`](scripts/README.md).
 
-- Removed forced `\clearpage` between §3.2 and §3.3 (eliminates a
-  half-page whitespace on body p.4).
-- Repositioned the "first crossing" arrow in `fig1_schema.tex` so it
-  no longer collides with the right-column legend.
-- Reorganised the appendix from 9 sections (A–I, several orphan
-  headings) to 5 narrative-anchored sections (A method / B cross-arch
-  / C variant AUROC / D splice anatomy / E reproducibility).
-- Added explicit numerical disclosures to the abstract (94.6% effect
-  retention, 3.18 layers shallowing, $p\!=\!3.0\!\times\!10^{-10}$).
-- Audited content for accuracy: replaced the inaccurate "blocks 30–31
-  acting as bookkeeping" wording with the empirically faithful
-  "block 30 is a rotation, block 31 is residual passthrough"
-  description (see Table~\ref{tab:idle-block} cosine values).
-- Ensured every figure (1–6) is referenced from at least one body
-  paragraph; appendix figures gained explicit body-text pointers.
+For figure provenance per file, see [`figures/README.md`](figures/README.md).
 
-## Data dependencies (not in this folder)
+---
 
-The figures were generated from `results/` artifacts at the repository
-root (`results/exp1_entropy/`, `results/exp2_shuffled/`,
-`results/figures_v3/`, `results/phase4/per_model_summary.json`, etc.).
-See the top-level `README.md` for the per-phase data layout.
+## Honest disclosure: Fig 1(b)
+
+The Fig 1(b) trajectories shown in the PDF are **schematic** (synthetic
+curves designed to satisfy the manuscript's settling-trajectory
+definition: $D_{\cos}(\ell{=}1)\!\approx\!1$, run-min is the actual
+running minimum of raw, splice $c{=}22$ and intron $c{=}31$). The
+underlying real per-layer cache (`phase1.6/chr22_cache.h5`,
+$\sim\!4{-}8$\,GB) lives only on the H200 and is not vendored.
+
+To swap in the real trajectories, run `make_v3_figures_remote.py` on
+the H200 and copy `fig1_v10.png` over `figures/fig1_panel_b.png`. The
+TikZ panel (`figures/fig1_combined.tex`) hard-codes the schematic
+coordinates; for the real-data version you would either:
+
+1. Set `\includegraphics{figures/fig1_v10.png}` (synced from H200) and
+   delete the TikZ panel-(b) block, OR
+2. Have H200 dump the two 32-vectors as a tiny NPZ
+   (`fig1b_real_traj.npz`) and edit both `make_fig1_panel_b_local.py`
+   and `fig1_combined.tex` to read from it.
+
+The current panel (b) caption already reads "Two chr22 example
+trajectories" — verify against the real data before camera-ready.
+
+---
+
+## Top-level file map
+
+```
+ICML_0429_v3/
+├── README.md                       ← you are here
+├── MANIFEST.md                     ← per-figure / per-table source-of-truth
+├── V3_REWRITE_NOTES.md             ← v1 → v3 narrative restructure log
+│
+├── gdtr_paper_ICML.tex             ← main LaTeX source (single file)
+├── gdtr_paper_ICML.pdf             ← built PDF (13 pages)
+├── gdtr_paper.bib                  ← bibliography
+│
+├── icml2026.sty / icml2026.bst     ← ICML 2026 style (do not modify)
+├── algorithm.sty / algorithmic.sty / fancyhdr.sty
+│                                   ← style dependencies
+│
+├── figures/                        ← every figure used by the build
+│   └── README.md                   ← per-figure provenance + regen script
+│
+├── scripts/                        ← regen scripts for every raster figure
+│   └── README.md                   ← per-script catalog
+│
+├── gdtr_paper_all_sources/         ← v1 source backup, kept for diff/audit
+└── gdtr_paper_manuscript*.tex      ← earlier-revision drafts kept for diff
+```
+
+---
+
+## Data dependencies (NOT in this folder)
+
+Figures consume artifacts under `../results/` at the repository root:
+
+| Path | Used by |
+|---|---|
+| `../results/figures_v3/fig_v9_meta.json` | Fig 2 (local), Fig 3 (local) |
+| `../results/phase4/per_model_summary.json` | Fig 4, App. B tables |
+| `../results/phase4/concordance_matrix.json` | Fig 5 |
+| `../results/tier1_baselines/baseline_auroc.json` | Fig 6 |
+| `../results/tier1_per_layer/per_layer_auroc.csv` | Fig 6, Tab. 9 |
+| `../results/exp1_entropy_meta.json` | App. A.4 entropy table |
+| `../results/exp2_shuffled_meta.json` | App. D.3 motif-flank table |
+| `../results/phase1.6_sub/splice_distance_profile.json` | App. D.1 |
+| `../results/phase1.6/chr22_cache.h5` (H200 only, $\sim\!4$ GB) | Fig 1(b) real, Fig 2 full |
+| `../results/p1a/`, `../results/p2/`, `../results/p2_indel/`, `../results/p3b1/` (H200 only) | Fig 2 / Fig 3 full per-position |
+
+See `MANIFEST.md` for the full mapping plus exact column names per CSV
+and per-key paths inside each JSON.
+
+---
+
+## Versioning
+
+This is **v11.5** (committed `c8d639a`, 2026-05-05). For the
+version-history map of the whole repository (Paper 1 v0–v11, Paper 2
+ΔH split, DOCX iterations), see the top-level
+[`../VERSIONS.md`](../VERSIONS.md). For the `v1 → v3` narrative
+restructure log (2026-04-28), see [`V3_REWRITE_NOTES.md`](V3_REWRITE_NOTES.md).
+
+### What changed in v11.5 (latest)
+
+- **Fig 1(b)** — definition-faithful redesign: raw starts at $D_{\cos}\!\approx\!1$,
+  run-min is the actual running min, settled-zone shading + below-axis
+  $c{=}22$ / $c{=}31$ callouts (pedagogical schematic).
+- **Appendix audit** — added 4 missing tables (entropy decoupling,
+  splice-fine minima, canonical/non-canonical motif, motif-flank
+  perturbation) + 1 figure (splice positional fine-profile).
+- **Fig 2** moved from page 4 → page 3 via `\afterpage{\clearpage}`
+  + relaxed `\topfraction`.
+- **Fig 3** title set to bold, fontsize 14 (was 11).
+- New scripts: `make_fig1_panel_b_local.py`. New figure assets:
+  `fig_splice_fine.{pdf,png}`, `fig1_panel_b.{pdf,png}`,
+  `fig_variants_local.{pdf,png}`.
+
+### What changed in v11 (vs v10)
+
+- Removed forced `\clearpage` between §3.2 and §3.3.
+- Repositioned the "first crossing" arrow in `fig1_schema.tex`.
+- Reorganised the appendix from 9 sections (A–I) to 5 narrative-anchored
+  sections (A method / B cross-arch / C variant AUROC / D splice anatomy
+  / E reproducibility).
+- Added explicit numerical disclosures to the abstract.
+- Audited Evo 2 idle-final-block wording for accuracy.
