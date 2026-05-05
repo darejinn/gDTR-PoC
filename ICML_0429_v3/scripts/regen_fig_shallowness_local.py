@@ -152,24 +152,24 @@ def fig_shallowness() -> None:
     # so they tier visually.
     rows.sort(key=lambda r: (0 if "splice donor" in r[0] else 1, -abs(r[1])))
     y = list(range(len(rows)))
+    # Pin every value label to the SAME right-aligned x position so no
+    # row-label can collide with any dot, line, or y-tick label. The
+    # dot+stem stay at the data position; the d/significance text is
+    # always parked at x=0.30, right-justified.
+    label_x = 0.30
     for yi, (lab, d, p, col) in enumerate(rows):
         ax.plot([0, d], [yi, yi], color=col, lw=3.0, alpha=0.65)
         ax.scatter(d, yi, s=110, color=col, edgecolor="black", zorder=3)
-        # Place the label *to the LEFT* of the dot for negative d, with a
-        # consistent absolute offset (0.025). This guarantees no overlap
-        # with the dot, the line, or with neighbouring rows: each label
-        # lives to the left of its own dot, on its own row.
-        offset = -0.025 if d < 0 else 0.025
-        ha = "right" if d < 0 else "left"
-        ax.text(d + offset, yi, f"$d={d:+.3f}$  {sig_stars(p)}",
-                ha=ha, va="center", color=col, fontsize=8.5,
+        ax.text(label_x, yi, f"$d={d:+.3f}$  {sig_stars(p)}",
+                ha="right", va="center", color=col, fontsize=8.5,
                 fontweight="bold")
     ax.axvline(0, color="#555555", lw=0.8)
     ax.set_yticks(y)
     ax.set_yticklabels([r[0] for r in rows])
     ax.invert_yaxis()
-    # Widen the x range so the leftmost label has clearance.
-    ax.set_xlim(-0.62, 0.20)
+    # Widen the x range to give the right-justified labels clearance and
+    # keep the leftmost dot well clear of the y-tick label area.
+    ax.set_xlim(-0.65, 0.32)
     ax.set_xlabel("Cohen's $d$ vs chr22 background\n(negative = shallower)")
     ax.set_title("(b) Regulatory annotations vary in effect size",
                  loc="left", fontweight="bold")

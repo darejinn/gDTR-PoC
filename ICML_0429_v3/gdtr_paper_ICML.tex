@@ -121,10 +121,8 @@ Genomic foundation models encode rich sequence regularities, yet existing tools 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[!t]
 \centering
-\resizebox{0.96\textwidth}{!}{\input{figures/fig1_schema.tex}}
-\vspace{0.50em}
-\resizebox{0.78\textwidth}{!}{\input{figures/fig1_trajectory.tex}}
-\caption{\gDTR{} measures the layer at which a token's representation stabilises. \textbf{(a)}~Pipeline: each Evo~2 layer emits a residual-stream tap $h_\ell(t)$; the cosine lens compares that tap to the final-layer state $h_L(t)$; a running-minimum envelope tracks the best match so far; and the first threshold crossing defines the settling depth $c(t)$. Lower $c(t)$ means earlier stabilisation. \textbf{(b)}~Two chr22 example trajectories: a splice-donor token whose running-min crosses $\gamma_{\cos}\!=\!0.397$ at $\ell\!=\!22$ (blue), and an intronic token that settles only at $\ell\!=\!31$ (grey). Faint traces are the raw $\Dcos(\ell, t)$; thick traces are the running-minimum envelope (Eq.~\ref{eq:settling}).}
+\resizebox{0.96\textwidth}{!}{\input{figures/fig1_combined.tex}}
+\caption{\gDTR{} measures the layer at which a token's representation stabilises. \textbf{(a)}~Pipeline: each Evo~2 layer emits a residual-stream tap $h_\ell(t)$; the cosine lens compares that tap to the final-layer state $h_L(t)$; a running-minimum envelope tracks the best match so far; and the first threshold crossing defines the settling depth $c(t)$. Lower $c(t)$ means earlier stabilisation. \textbf{(b)}~Two chr22 example trajectories. Both are flat near $1$ for the first $\sim$5--10 layers (representations are uninformed about the final-layer state), then descend as deeper layers commit to the post-norm direction. The splice-donor running-min (blue) crosses $\gamma_{\cos}\!=\!0.397$ at $\ell\!=\!22$; the intronic running-min (grey) crosses only at $\ell\!=\!31$. Faint traces are the raw $\Dcos(\ell, t)$; thick traces are the running-minimum envelope (Eq.~\ref{eq:settling}).}
 \label{fig:schematic}
 \end{figure*}
 

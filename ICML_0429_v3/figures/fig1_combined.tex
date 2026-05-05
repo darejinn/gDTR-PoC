@@ -1,0 +1,272 @@
+% Fig 1 combined: panels (a) pipeline + (b) example trajectories rendered
+% in ONE tikzpicture so the two panels share an identical font family,
+% weight class, glyph size, and rule thickness. Both panels use
+% \sffamily\small as the base font; \usepackage{DejaVuSans} in the
+% preamble makes that resolve to DejaVu Sans, the same face matplotlib
+% uses for the Fig 2-6 raster panels.
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  >=Latex,
+  layer/.style={draw=black, rounded corners=2pt, minimum width=1.15cm,
+                minimum height=0.30cm, inner sep=1pt},
+  head/.style={font=\sffamily\bfseries\small, align=center},
+  note/.style={font=\sffamily\scriptsize, align=center},
+  bar/.style={draw=black, line width=0.25pt, minimum height=0.10cm,
+              inner sep=0pt, anchor=west},
+  good/.style={fill=blue!70},
+  late/.style={fill=gray!25},
+  ok/.style={circle, draw=blue!75!black, line width=0.75pt,
+             minimum size=0.26cm, inner sep=0pt},
+  no/.style={cross out, draw=red!80!black, line width=0.75pt,
+             minimum size=0.25cm, inner sep=0pt},
+  panel/.style={font=\sffamily\bfseries\small, anchor=south west},
+]
+
+% ====================================================================
+% PANEL (a) — pipeline schema (top half)
+% ====================================================================
+% Origin: (0, 0). Layer column extends right and down from here.
+% Title sits above the column headers (which span y in [4.40, 4.85]).
+\node[panel] at (-0.35, 5.20) {(a) \gDTR{} pipeline};
+
+% --- column headers ---
+\node[head] at (0.70, 4.55) {residual stream\\states $h_\ell(t)$};
+\node[head] at (3.55, 4.55) {distance to\\final state};
+\node[note] at (3.55, 4.00) {$D_{\cos}=1-\cos(h_\ell,h_L)$};
+\node[note, text=black!65] at (3.55, 3.70)
+  {current layer vs.\ final layer};
+
+\node[head] at (6.45, 4.55) {running minimum\\so far};
+\node[note] at (6.45, 4.00) {$m_\ell=\min_{j\leq\ell}D_{\cos}(j)$};
+
+\node[head] at (9.00, 4.55) {below\\threshold?};
+\node[note] at (9.00, 4.00) {$m_\ell(t)\leq\gamma$};
+
+\node[head] at (11.35, 4.55) {settling depth $c(t)$};
+\node[note, text=blue!75!black, font=\sffamily\scriptsize\bfseries,
+      text width=2.45cm, align=center]
+  at (11.35, 4.02) {first layer with\\$m_\ell\leq\gamma$};
+\node[note, text=blue!75!black] at (11.35, 3.57) {lower $c(t)$ $=$ earlier};
+
+% --- per-layer rows ---
+\foreach \lab/\y/\col/\raw/\run/\settled in {
+  L32/3.30/green!55!black/0.40/0.40/1,
+  L31/2.93/green!60!black/0.62/0.40/1,
+  L30/2.56/green!55/0.40/0.40/1,
+  L29/2.19/green!35/0.66/0.46/0,
+  L2/1.41/green!12/0.92/0.78/0,
+  L1/1.04/white/0.78/0.78/0
+}{
+  \node[layer, fill=\col] (layer-\lab) at (0.70, \y) {\bfseries \lab};
+  \draw[->, line width=0.35pt, black!65] (1.35, \y) -- (2.55, \y);
+  \pgfmathsetmacro{\rawlen}{0.95*\raw}
+  \pgfmathsetmacro{\runlen}{0.95*\run}
+  \draw[bar, fill=gray!25] (2.85, \y - 0.05) rectangle ++(0.95, 0.10);
+  \draw[bar, fill={\ifnum\settled=1 blue!70\else gray!25\fi}]
+    (2.85, \y - 0.05) rectangle ++(\rawlen, 0.10);
+  \draw[bar, fill=gray!25] (5.95, \y - 0.05) rectangle ++(0.95, 0.10);
+  \draw[bar, fill={\ifnum\settled=1 blue!70\else gray!25\fi}]
+    (5.95, \y - 0.05) rectangle ++(\runlen, 0.10);
+  \ifnum\settled=1
+    \node[ok] at (9.00, \y) {};
+  \else
+    \node[no] at (9.00, \y) {};
+  \fi
+}
+
+% Vertical ellipsis between L29 and L2.
+\node[font=\sffamily\large, text=black!55] at (0.70, 1.80) {$\vdots$};
+\node[font=\sffamily\large, text=black!55] at (3.35, 1.80) {$\vdots$};
+\node[font=\sffamily\large, text=black!55] at (6.45, 1.80) {$\vdots$};
+\node[font=\sffamily\large, text=black!55] at (9.00, 1.80) {$\vdots$};
+
+% Threshold guides for the two bar columns.
+\draw[red!85!black, dashed, line width=0.4pt] (3.23, 0.87) -- (3.23, 3.67);
+\draw[red!85!black, dashed, line width=0.4pt] (6.33, 0.87) -- (6.33, 3.67);
+\node[note, text=red!85!black] at (3.23, 0.65) {$\gamma$};
+\node[note, text=red!85!black] at (6.33, 0.65) {$\gamma$};
+
+% First-crossing annotation: arrow from outside the column to L30 row.
+\draw[->, line width=0.55pt, blue!75!black] (9.95, 2.56) -- (9.40, 2.56);
+\node[note, text=blue!75!black, font=\sffamily\scriptsize\bfseries,
+      align=left]
+  at (10.50, 2.56) {first crossing\\$\Rightarrow c(t)\!=\!30$};
+
+% ====================================================================
+% PANEL (b) — example settling trajectories (bottom half)
+% Coordinate system: shifted down so panels do not overlap.
+% Local coords: x = layer index, y = D_cos value, both scaled.
+% ====================================================================
+\def\xs{0.32}     % cm per layer
+\def\ys{2.20}     % cm per D_cos unit
+\def\xmin{1}
+\def\xmax{31}
+\def\ymin{0.30}
+\def\ymax{1.05}
+\def\gammaval{0.397}
+
+% Panel (b) is shifted DOWN so it sits below panel (a)'s lowest element
+% (the gamma label at y=0.65). Plot vertical extent within the scope is
+% y in [0, 1.65] (axis) and the title sits above that at y=2.00.
+\begin{scope}[shift={(0, -2.20)}]
+
+% Panel (b) title at top-left, anchor=south west so the text grows UPWARD
+% from the anchor; placed above the plot's y-axis top (y=1.65 within scope).
+\node[panel] at (-0.85, 2.00) {(b) Example settling trajectories};
+
+% --- y-axis ticks + horizontal grid (light) ---
+\foreach \y/\lab in {0.40/0.4, 0.60/0.6, 0.80/0.8, 1.00/1.0}{
+  \draw[black!25, very thin] (0, {(\y - \ymin) * \ys})
+    -- ({(\xmax - \xmin) * \xs}, {(\y - \ymin) * \ys});
+  \node[anchor=east, font=\sffamily\scriptsize, text=black!75]
+    at (-0.05, {(\y - \ymin) * \ys}) {\lab};
+}
+% --- x-axis ticks ---
+\foreach \x in {5, 10, 15, 20, 25, 30}{
+  \draw[black!50, very thin] ({(\x - \xmin) * \xs}, -0.02)
+    -- ({(\x - \xmin) * \xs}, 0.04);
+  \node[anchor=north, font=\sffamily\scriptsize, text=black!75]
+    at ({(\x - \xmin) * \xs}, -0.06) {\x};
+}
+% Axis lines.
+\draw[black!75, line width=0.4pt] (0, 0)
+  -- ({(\xmax - \xmin) * \xs}, 0);
+\draw[black!75, line width=0.4pt] (0, 0)
+  -- (0, {(\ymax - \ymin) * \ys});
+
+% Axis labels.
+\node[font=\sffamily\small, text=black!85, rotate=90]
+  at (-0.85, {0.5 * (\ymax - \ymin) * \ys}) {$D_{\cos}(\ell, t)$};
+\node[font=\sffamily\small, text=black!85]
+  at ({0.5 * (\xmax - \xmin) * \xs}, -0.55) {layer $\ell$};
+
+% --- gamma threshold (red dashed) ---
+\draw[red!85!black, dashed, line width=0.55pt]
+  (0, {(\gammaval - \ymin) * \ys})
+  -- ({(\xmax - \xmin) * \xs}, {(\gammaval - \ymin) * \ys});
+\node[anchor=south west, font=\sffamily\scriptsize, text=red!85!black]
+  at (0.10, {(\gammaval - \ymin) * \ys + 0.03})
+  {$\gamma_{\cos}=0.397$};
+
+% --- raw splice trace (light blue, thin, noisy)
+%     Stays near 0.95 for the first ~6 layers, then descends.
+\draw[blue!40, line width=0.30pt]
+  plot coordinates {
+    ({( 1 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 2 - \xmin) * \xs},{(0.96 - \ymin) * \ys})
+    ({( 3 - \xmin) * \xs},{(0.94 - \ymin) * \ys})
+    ({( 4 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 5 - \xmin) * \xs},{(0.93 - \ymin) * \ys})
+    ({( 6 - \xmin) * \xs},{(0.92 - \ymin) * \ys})
+    ({( 7 - \xmin) * \xs},{(0.88 - \ymin) * \ys})
+    ({( 8 - \xmin) * \xs},{(0.83 - \ymin) * \ys})
+    ({( 9 - \xmin) * \xs},{(0.85 - \ymin) * \ys})
+    ({(10 - \xmin) * \xs},{(0.78 - \ymin) * \ys})
+    ({(11 - \xmin) * \xs},{(0.72 - \ymin) * \ys})
+    ({(12 - \xmin) * \xs},{(0.74 - \ymin) * \ys})
+    ({(13 - \xmin) * \xs},{(0.66 - \ymin) * \ys})
+    ({(14 - \xmin) * \xs},{(0.62 - \ymin) * \ys})
+    ({(15 - \xmin) * \xs},{(0.55 - \ymin) * \ys})
+    ({(16 - \xmin) * \xs},{(0.58 - \ymin) * \ys})
+    ({(17 - \xmin) * \xs},{(0.50 - \ymin) * \ys})
+    ({(18 - \xmin) * \xs},{(0.46 - \ymin) * \ys})
+    ({(19 - \xmin) * \xs},{(0.49 - \ymin) * \ys})
+    ({(20 - \xmin) * \xs},{(0.43 - \ymin) * \ys})
+    ({(21 - \xmin) * \xs},{(0.41 - \ymin) * \ys})
+    ({(22 - \xmin) * \xs},{(0.397 - \ymin) * \ys})
+    ({(23 - \xmin) * \xs},{(0.45 - \ymin) * \ys})
+    ({(24 - \xmin) * \xs},{(0.43 - \ymin) * \ys})
+    ({(26 - \xmin) * \xs},{(0.42 - \ymin) * \ys})
+    ({(28 - \xmin) * \xs},{(0.40 - \ymin) * \ys})
+    ({(30 - \xmin) * \xs},{(0.41 - \ymin) * \ys})
+    ({(31 - \xmin) * \xs},{(0.40 - \ymin) * \ys})
+  };
+
+% --- run-min splice (dark blue, thick, monotone non-increasing) ---
+\draw[blue!75!black, line width=1.2pt]
+  plot[smooth] coordinates {
+    ({( 1 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 6 - \xmin) * \xs},{(0.92 - \ymin) * \ys})
+    ({( 8 - \xmin) * \xs},{(0.83 - \ymin) * \ys})
+    ({(10 - \xmin) * \xs},{(0.78 - \ymin) * \ys})
+    ({(13 - \xmin) * \xs},{(0.66 - \ymin) * \ys})
+    ({(15 - \xmin) * \xs},{(0.55 - \ymin) * \ys})
+    ({(18 - \xmin) * \xs},{(0.46 - \ymin) * \ys})
+    ({(21 - \xmin) * \xs},{(0.41 - \ymin) * \ys})
+    ({(22 - \xmin) * \xs},{(0.397 - \ymin) * \ys})
+    ({(31 - \xmin) * \xs},{(0.397 - \ymin) * \ys})
+  };
+\filldraw[blue!75!black, draw=black, line width=0.3pt]
+  ({(22 - \xmin) * \xs}, {(0.397 - \ymin) * \ys}) circle (0.10);
+
+% --- raw intron trace (light grey, thin, noisy)
+%     Stays near 0.95 for the first ~10 layers, then descends slowly.
+\draw[black!30, line width=0.30pt]
+  plot coordinates {
+    ({( 1 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 2 - \xmin) * \xs},{(0.94 - \ymin) * \ys})
+    ({( 3 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 4 - \xmin) * \xs},{(0.93 - \ymin) * \ys})
+    ({( 5 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({( 6 - \xmin) * \xs},{(0.94 - \ymin) * \ys})
+    ({( 7 - \xmin) * \xs},{(0.93 - \ymin) * \ys})
+    ({( 8 - \xmin) * \xs},{(0.94 - \ymin) * \ys})
+    ({( 9 - \xmin) * \xs},{(0.92 - \ymin) * \ys})
+    ({(10 - \xmin) * \xs},{(0.90 - \ymin) * \ys})
+    ({(11 - \xmin) * \xs},{(0.88 - \ymin) * \ys})
+    ({(12 - \xmin) * \xs},{(0.86 - \ymin) * \ys})
+    ({(13 - \xmin) * \xs},{(0.84 - \ymin) * \ys})
+    ({(14 - \xmin) * \xs},{(0.83 - \ymin) * \ys})
+    ({(15 - \xmin) * \xs},{(0.78 - \ymin) * \ys})
+    ({(16 - \xmin) * \xs},{(0.80 - \ymin) * \ys})
+    ({(17 - \xmin) * \xs},{(0.74 - \ymin) * \ys})
+    ({(18 - \xmin) * \xs},{(0.72 - \ymin) * \ys})
+    ({(19 - \xmin) * \xs},{(0.68 - \ymin) * \ys})
+    ({(20 - \xmin) * \xs},{(0.65 - \ymin) * \ys})
+    ({(21 - \xmin) * \xs},{(0.62 - \ymin) * \ys})
+    ({(22 - \xmin) * \xs},{(0.60 - \ymin) * \ys})
+    ({(23 - \xmin) * \xs},{(0.55 - \ymin) * \ys})
+    ({(24 - \xmin) * \xs},{(0.56 - \ymin) * \ys})
+    ({(25 - \xmin) * \xs},{(0.50 - \ymin) * \ys})
+    ({(26 - \xmin) * \xs},{(0.48 - \ymin) * \ys})
+    ({(27 - \xmin) * \xs},{(0.46 - \ymin) * \ys})
+    ({(28 - \xmin) * \xs},{(0.45 - \ymin) * \ys})
+    ({(29 - \xmin) * \xs},{(0.42 - \ymin) * \ys})
+    ({(30 - \xmin) * \xs},{(0.41 - \ymin) * \ys})
+    ({(31 - \xmin) * \xs},{(0.397 - \ymin) * \ys})
+  };
+
+% --- run-min intron (dark grey, thick, monotone non-increasing) ---
+\draw[black!65, line width=1.2pt]
+  plot[smooth] coordinates {
+    ({( 1 - \xmin) * \xs},{(0.95 - \ymin) * \ys})
+    ({(10 - \xmin) * \xs},{(0.90 - \ymin) * \ys})
+    ({(14 - \xmin) * \xs},{(0.83 - \ymin) * \ys})
+    ({(18 - \xmin) * \xs},{(0.72 - \ymin) * \ys})
+    ({(22 - \xmin) * \xs},{(0.60 - \ymin) * \ys})
+    ({(26 - \xmin) * \xs},{(0.48 - \ymin) * \ys})
+    ({(31 - \xmin) * \xs},{(0.397 - \ymin) * \ys})
+  };
+\filldraw[black!65, draw=black, line width=0.3pt]
+  ({(31 - \xmin) * \xs}, {(0.397 - \ymin) * \ys}) circle (0.10);
+
+% --- legend (top-right, inside axis) ---
+\begin{scope}[shift={({(\xmax - \xmin) * \xs - 3.55},
+                      {(\ymax - \ymin) * \ys - 0.10})}]
+  \draw[blue!40, line width=0.30pt] (0, 0) -- (0.45, 0);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
+    at (0.50, 0) {raw splice};
+  \draw[blue!75!black, line width=1.2pt] (0, -0.30) -- (0.45, -0.30);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
+    at (0.50, -0.30) {run-min splice, $c\!=\!22$};
+  \draw[black!30, line width=0.30pt] (0, -0.60) -- (0.45, -0.60);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
+    at (0.50, -0.60) {raw intron};
+  \draw[black!65, line width=1.2pt] (0, -0.90) -- (0.45, -0.90);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
+    at (0.50, -0.90) {run-min intron, $c\!=\!31$};
+\end{scope}
+
+\end{scope}  % end panel (b) shift
+
+\end{tikzpicture}
