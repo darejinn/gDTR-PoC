@@ -499,7 +499,7 @@ def fig_variants() -> None:
     ax.set_xlim(0, 34)
     ax.set_xlabel("argmax layer where $|\\Delta D_{cos}|$ peaks")
     ax.set_title("Variant consequences peak at different disruption layers",
-                 loc="left", fontsize=11)
+                 loc="left", fontsize=14, fontweight="bold")
     ax.grid(axis="x", color="#dddddd", lw=0.5)
     fig.tight_layout()
     save(fig, "fig_variants")

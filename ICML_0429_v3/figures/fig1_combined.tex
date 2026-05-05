@@ -111,7 +111,9 @@
 
 % Panel (b) is shifted DOWN so it sits below panel (a). Plot height in
 % scope-local y is (\ymax-\ymin)*\ys = 1.65 cm; the title sits above
-% that at y = 2.00 within the scope.
+% that at y = 2.00 within the scope; the legend (5 entries with γ row)
+% lives INSIDE the plot at the top-right corner with a white-fill
+% rectangle.
 \begin{scope}[shift={(0, -2.05)}]
 
 % Panel (b) title (top-left, matches panel (a) style).
@@ -143,119 +145,188 @@
 \node[font=\sffamily\small, text=black!85]
   at ({0.5 * (\xmax - \xmin) * \xs}, -0.55) {layer $\ell$};
 
-% --- gamma threshold (red dashed); label at right side, just above
-%     the gamma line (mirrors fig1_trajectory.tex).
+% --- gamma threshold (red dashed). The textual label is inside the
+%     top-right legend (last row), so we draw the line only.
 \draw[red!85!black, dashed, line width=0.55pt]
   (0, {(\gammaval - \ymin) * \ys})
   -- ({(\xmax - \xmin) * \xs}, {(\gammaval - \ymin) * \ys});
-\node[anchor=south east, font=\sffamily\scriptsize, text=red!85!black]
-  at ({(\xmax - \xmin) * \xs - 0.10},
-      {(\gammaval - \ymin) * \ys + 0.03})
-  {$\gamma_{\cos}=0.397$};
 
-% --- raw splice trace (light blue, thin) ---
-\draw[blue!40, line width=0.35pt]
+% --- raw splice trace (light blue, thin) — starts ≈1.0 (orthogonal at
+%     the embedding), noisy descent with occasional spikes above 1.0,
+%     first dips below gamma=0.397 at L=22; subsequent values stay
+%     near or below gamma. ---
+\draw[blue!55!black, line width=0.7pt]
   plot coordinates {
-    (0,{(0.90-\ymin)*\ys})
-    ({(2-\xmin)*\xs},{(0.90-\ymin)*\ys})
-    ({(3-\xmin)*\xs},{(0.92-\ymin)*\ys})
-    ({(5-\xmin)*\xs},{(0.86-\ymin)*\ys})
-    ({(6-\xmin)*\xs},{(0.78-\ymin)*\ys})
-    ({(7-\xmin)*\xs},{(0.66-\ymin)*\ys})
-    ({(8-\xmin)*\xs},{(0.70-\ymin)*\ys})
-    ({(10-\xmin)*\xs},{(0.62-\ymin)*\ys})
-    ({(12-\xmin)*\xs},{(0.66-\ymin)*\ys})
-    ({(14-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({( 1-\xmin)*\xs},{(1.00-\ymin)*\ys})
+    ({( 2-\xmin)*\xs},{(0.98-\ymin)*\ys})
+    ({( 3-\xmin)*\xs},{(1.02-\ymin)*\ys})
+    ({( 4-\xmin)*\xs},{(0.95-\ymin)*\ys})
+    ({( 5-\xmin)*\xs},{(0.93-\ymin)*\ys})
+    ({( 6-\xmin)*\xs},{(0.96-\ymin)*\ys})
+    ({( 7-\xmin)*\xs},{(0.88-\ymin)*\ys})
+    ({( 8-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({( 9-\xmin)*\xs},{(0.92-\ymin)*\ys})
+    ({(10-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(11-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({(12-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(13-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(14-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(15-\xmin)*\xs},{(0.48-\ymin)*\ys})
     ({(16-\xmin)*\xs},{(0.55-\ymin)*\ys})
-    ({(18-\xmin)*\xs},{(0.44-\ymin)*\ys})
-    ({(20-\xmin)*\xs},{(0.42-\ymin)*\ys})
-    ({(22-\xmin)*\xs},{(0.38-\ymin)*\ys})
-    ({(24-\xmin)*\xs},{(0.46-\ymin)*\ys})
-    ({(26-\xmin)*\xs},{(0.50-\ymin)*\ys})
-    ({(28-\xmin)*\xs},{(0.42-\ymin)*\ys})
-    ({(30-\xmin)*\xs},{(0.40-\ymin)*\ys})
-    ({(31-\xmin)*\xs},{(0.40-\ymin)*\ys})
-  };
-% --- run-min splice (dark blue, thick) — monotone non-increasing,
-%     hits gamma at L=22 ---
-\draw[blue!75!black, line width=1.2pt]
-  plot coordinates {
-    (0,{(0.90-\ymin)*\ys})
-    ({(2-\xmin)*\xs},{(0.90-\ymin)*\ys})
-    ({(5-\xmin)*\xs},{(0.86-\ymin)*\ys})
-    ({(7-\xmin)*\xs},{(0.66-\ymin)*\ys})
-    ({(10-\xmin)*\xs},{(0.62-\ymin)*\ys})
-    ({(14-\xmin)*\xs},{(0.50-\ymin)*\ys})
-    ({(18-\xmin)*\xs},{(0.44-\ymin)*\ys})
-    ({(20-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({(17-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(18-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({(19-\xmin)*\xs},{(0.43-\ymin)*\ys})
+    ({(20-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(21-\xmin)*\xs},{(0.42-\ymin)*\ys})
     ({(22-\xmin)*\xs},{(0.397-\ymin)*\ys})
-    ({(25-\xmin)*\xs},{(0.397-\ymin)*\ys})
-    ({(28-\xmin)*\xs},{(0.397-\ymin)*\ys})
-    ({(31-\xmin)*\xs},{(0.397-\ymin)*\ys})
+    ({(23-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({(24-\xmin)*\xs},{(0.43-\ymin)*\ys})
+    ({(25-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(26-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({(27-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({(28-\xmin)*\xs},{(0.40-\ymin)*\ys})
+    ({(29-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(30-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({(31-\xmin)*\xs},{(0.40-\ymin)*\ys})
+    ({(32-\xmin)*\xs},{(0.41-\ymin)*\ys})
+  };
+% --- run-min splice (dark blue, thick) — proper running minimum of the
+%     raw splice curve above. Drops only at layers where raw goes
+%     strictly below the previous min; flat otherwise. The first layer
+%     where the running-min reaches gamma is L=22 (the marker).
+%     Drawn as step-post: each (L_i, y_i) → horizontal to (L_{i+1}-1)
+%     → vertical drop to y_{i+1}. We collapse runs of identical y's
+%     so each pair (L, y) is a "drop event". ---
+\draw[blue!75!black, line width=1.4pt]
+  plot coordinates {
+    ({( 1-\xmin)*\xs},{(1.00-\ymin)*\ys})
+    ({( 2-\xmin)*\xs},{(0.98-\ymin)*\ys})
+    ({( 4-\xmin)*\xs},{(0.98-\ymin)*\ys})
+    ({( 5-\xmin)*\xs},{(0.93-\ymin)*\ys})
+    ({( 7-\xmin)*\xs},{(0.88-\ymin)*\ys})
+    ({( 8-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({( 9-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({(10-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(11-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(12-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(13-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(14-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(15-\xmin)*\xs},{(0.48-\ymin)*\ys})
+    ({(16-\xmin)*\xs},{(0.48-\ymin)*\ys})
+    ({(17-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(18-\xmin)*\xs},{(0.45-\ymin)*\ys})
+    ({(19-\xmin)*\xs},{(0.43-\ymin)*\ys})
+    ({(20-\xmin)*\xs},{(0.43-\ymin)*\ys})
+    ({(21-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({(22-\xmin)*\xs},{(0.397-\ymin)*\ys})
+    ({(32-\xmin)*\xs},{(0.397-\ymin)*\ys})
   };
 \filldraw[blue!75!black, draw=black, line width=0.3pt]
   ({(22-\xmin)*\xs},{(0.397-\ymin)*\ys}) circle (0.10);
 
-% --- raw intron trace (light grey, thin) ---
-\draw[black!35, line width=0.35pt]
+% --- raw intron trace (light grey, thin) — also starts ≈1.0, descends
+%     more gradually, never dips below gamma until the final layer
+%     (L=31). Higher floor at the middle layers explains the deeper
+%     settling depth. ---
+\draw[black!55, line width=0.7pt]
   plot coordinates {
-    (0,{(0.90-\ymin)*\ys})
-    ({(3-\xmin)*\xs},{(0.88-\ymin)*\ys})
-    ({(5-\xmin)*\xs},{(0.92-\ymin)*\ys})
-    ({(7-\xmin)*\xs},{(0.85-\ymin)*\ys})
-    ({(9-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({( 1-\xmin)*\xs},{(1.00-\ymin)*\ys})
+    ({( 2-\xmin)*\xs},{(1.05-\ymin)*\ys})
+    ({( 3-\xmin)*\xs},{(0.97-\ymin)*\ys})
+    ({( 4-\xmin)*\xs},{(1.02-\ymin)*\ys})
+    ({( 5-\xmin)*\xs},{(0.95-\ymin)*\ys})
+    ({( 6-\xmin)*\xs},{(0.93-\ymin)*\ys})
+    ({( 7-\xmin)*\xs},{(0.95-\ymin)*\ys})
+    ({( 8-\xmin)*\xs},{(0.88-\ymin)*\ys})
+    ({( 9-\xmin)*\xs},{(0.92-\ymin)*\ys})
+    ({(10-\xmin)*\xs},{(0.85-\ymin)*\ys})
     ({(11-\xmin)*\xs},{(0.83-\ymin)*\ys})
-    ({(13-\xmin)*\xs},{(0.72-\ymin)*\ys})
-    ({(15-\xmin)*\xs},{(0.65-\ymin)*\ys})
-    ({(17-\xmin)*\xs},{(0.70-\ymin)*\ys})
-    ({(19-\xmin)*\xs},{(0.66-\ymin)*\ys})
-    ({(21-\xmin)*\xs},{(0.62-\ymin)*\ys})
-    ({(23-\xmin)*\xs},{(0.58-\ymin)*\ys})
-    ({(25-\xmin)*\xs},{(0.55-\ymin)*\ys})
-    ({(27-\xmin)*\xs},{(0.50-\ymin)*\ys})
-    ({(29-\xmin)*\xs},{(0.48-\ymin)*\ys})
-    ({(30-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({(12-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({(13-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(14-\xmin)*\xs},{(0.80-\ymin)*\ys})
+    ({(15-\xmin)*\xs},{(0.74-\ymin)*\ys})
+    ({(16-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(17-\xmin)*\xs},{(0.72-\ymin)*\ys})
+    ({(18-\xmin)*\xs},{(0.75-\ymin)*\ys})
+    ({(19-\xmin)*\xs},{(0.68-\ymin)*\ys})
+    ({(20-\xmin)*\xs},{(0.72-\ymin)*\ys})
+    ({(21-\xmin)*\xs},{(0.65-\ymin)*\ys})
+    ({(22-\xmin)*\xs},{(0.68-\ymin)*\ys})
+    ({(23-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(24-\xmin)*\xs},{(0.65-\ymin)*\ys})
+    ({(25-\xmin)*\xs},{(0.58-\ymin)*\ys})
+    ({(26-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(27-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(28-\xmin)*\xs},{(0.58-\ymin)*\ys})
+    ({(29-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({(30-\xmin)*\xs},{(0.45-\ymin)*\ys})
     ({(31-\xmin)*\xs},{(0.397-\ymin)*\ys})
+    ({(32-\xmin)*\xs},{(0.42-\ymin)*\ys})
   };
-% --- run-min intron (dark grey, thick) — monotone non-increasing,
-%     hits gamma at L=31 ---
-\draw[black!65, line width=1.2pt]
+% --- run-min intron (dark grey, thick) — proper running minimum of the
+%     raw intron curve above. Each pair is a drop event. First reaches
+%     gamma only at L=31. ---
+\draw[black!65, line width=1.4pt]
   plot coordinates {
-    (0,{(0.90-\ymin)*\ys})
-    ({(3-\xmin)*\xs},{(0.88-\ymin)*\ys})
-    ({(7-\xmin)*\xs},{(0.85-\ymin)*\ys})
-    ({(9-\xmin)*\xs},{(0.78-\ymin)*\ys})
-    ({(13-\xmin)*\xs},{(0.72-\ymin)*\ys})
-    ({(15-\xmin)*\xs},{(0.65-\ymin)*\ys})
-    ({(19-\xmin)*\xs},{(0.66-\ymin)*\ys})
-    ({(21-\xmin)*\xs},{(0.62-\ymin)*\ys})
-    ({(23-\xmin)*\xs},{(0.58-\ymin)*\ys})
-    ({(25-\xmin)*\xs},{(0.55-\ymin)*\ys})
-    ({(27-\xmin)*\xs},{(0.50-\ymin)*\ys})
-    ({(29-\xmin)*\xs},{(0.48-\ymin)*\ys})
-    ({(30-\xmin)*\xs},{(0.42-\ymin)*\ys})
+    ({( 1-\xmin)*\xs},{(1.00-\ymin)*\ys})
+    ({( 3-\xmin)*\xs},{(1.00-\ymin)*\ys})
+    ({( 3-\xmin)*\xs},{(0.97-\ymin)*\ys})
+    ({( 4-\xmin)*\xs},{(0.97-\ymin)*\ys})
+    ({( 5-\xmin)*\xs},{(0.95-\ymin)*\ys})
+    ({( 6-\xmin)*\xs},{(0.93-\ymin)*\ys})
+    ({( 7-\xmin)*\xs},{(0.93-\ymin)*\ys})
+    ({( 8-\xmin)*\xs},{(0.88-\ymin)*\ys})
+    ({(10-\xmin)*\xs},{(0.88-\ymin)*\ys})
+    ({(10-\xmin)*\xs},{(0.85-\ymin)*\ys})
+    ({(11-\xmin)*\xs},{(0.83-\ymin)*\ys})
+    ({(12-\xmin)*\xs},{(0.83-\ymin)*\ys})
+    ({(13-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(14-\xmin)*\xs},{(0.78-\ymin)*\ys})
+    ({(15-\xmin)*\xs},{(0.74-\ymin)*\ys})
+    ({(16-\xmin)*\xs},{(0.74-\ymin)*\ys})
+    ({(17-\xmin)*\xs},{(0.72-\ymin)*\ys})
+    ({(18-\xmin)*\xs},{(0.72-\ymin)*\ys})
+    ({(19-\xmin)*\xs},{(0.68-\ymin)*\ys})
+    ({(20-\xmin)*\xs},{(0.68-\ymin)*\ys})
+    ({(21-\xmin)*\xs},{(0.65-\ymin)*\ys})
+    ({(22-\xmin)*\xs},{(0.65-\ymin)*\ys})
+    ({(23-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(24-\xmin)*\xs},{(0.62-\ymin)*\ys})
+    ({(25-\xmin)*\xs},{(0.58-\ymin)*\ys})
+    ({(26-\xmin)*\xs},{(0.58-\ymin)*\ys})
+    ({(27-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(28-\xmin)*\xs},{(0.55-\ymin)*\ys})
+    ({(29-\xmin)*\xs},{(0.50-\ymin)*\ys})
+    ({(30-\xmin)*\xs},{(0.45-\ymin)*\ys})
     ({(31-\xmin)*\xs},{(0.397-\ymin)*\ys})
+    ({(32-\xmin)*\xs},{(0.397-\ymin)*\ys})
   };
 \filldraw[black!65, draw=black, line width=0.3pt]
   ({(31-\xmin)*\xs},{(0.397-\ymin)*\ys}) circle (0.10);
 
-% --- legend (top-right, inside axis area).
-%     Position: 3.55 cm from the right edge, 0.40 cm below the top so
-%     it does not collide with the gamma label at the right edge.
-\begin{scope}[shift={({(\xmax-\xmin)*\xs - 3.55},
-                      {(\ymax-\ymin)*\ys - 0.40})}]
-  \draw[blue!40, line width=0.35pt] (0,0) -- (0.45,0);
-  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
-    at (0.50,0) {raw splice};
-  \draw[blue!75!black, line width=1.2pt] (0,-0.30) -- (0.45,-0.30);
-  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
-    at (0.50,-0.30) {run-min splice, $c\!=\!22$};
-  \draw[black!35, line width=0.35pt] (0,-0.60) -- (0.45,-0.60);
-  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
-    at (0.50,-0.60) {raw intron};
-  \draw[black!65, line width=1.2pt] (0,-0.90) -- (0.45,-0.90);
-  \node[anchor=west, font=\sffamily\scriptsize, text=black!80]
-    at (0.50,-0.90) {run-min intron, $c\!=\!31$};
+% --- legend OUTSIDE plot (right margin), no fill, plot itself is now
+%     unobstructed. 1-column × 5 rows; total width ~3.4 cm. ---
+\begin{scope}[shift={({(\xmax-\xmin)*\xs + 0.30}, {(\ymax-\ymin)*\ys - 0.10})}]
+  \draw[blue!55!black, line width=0.7pt] (0.05, 0) -- (0.60, 0);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!85]
+    at (0.66, 0) {raw splice};
+
+  \draw[blue!75!black, line width=1.4pt] (0.05, -0.30) -- (0.60, -0.30);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!85]
+    at (0.66, -0.30) {run-min splice, $c\!=\!22$};
+
+  \draw[black!55, line width=0.7pt] (0.05, -0.60) -- (0.60, -0.60);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!85]
+    at (0.66, -0.60) {raw intron};
+
+  \draw[black!65, line width=1.4pt] (0.05, -0.90) -- (0.60, -0.90);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!85]
+    at (0.66, -0.90) {run-min intron, $c\!=\!31$};
+
+  \draw[red!85!black, dashed, line width=0.55pt]
+    (0.05, -1.20) -- (0.60, -1.20);
+  \node[anchor=west, font=\sffamily\scriptsize, text=black!85]
+    at (0.66, -1.20) {$\gamma_{\cos}=0.397$};
 \end{scope}
 
 \end{scope}  % end panel (b) shift
