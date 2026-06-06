@@ -155,7 +155,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[!t]
   \centering
-  \includegraphics[width=0.98\textwidth]{figures/fig1_final.png}
+  \includegraphics[width=0.98\textwidth]{figures/fig_1_final.png}
   \caption{\gDTR{} measures the layer at which a token's representation stabilises. Each Evo~2 layer emits a residual-stream tap $h_\ell(t)$; the \emph{cosine lens} compares it to the final-layer state $h_L$ via $\Dcos(\ell)\!=\!1\!-\!\cos(h_L, h_\ell)$, and the \emph{running-minimum envelope} $m_\ell\!=\!\min_{j\le\ell}\Dcos(j)$ enforces monotone descent. The first layer with $m_\ell\!\le\!\gamma$ defines the settling depth $c(t)$ (Eq.~\ref{eq:settling}). In the worked example, $c(t)\!=\!30$: layer~31 alone has a larger $\Dcos$, but the envelope carries layer~30's smaller value forward. Lower $c(t)$ means earlier stabilisation.}
   \label{fig:schematic}
 \end{figure*}
