@@ -71,6 +71,72 @@ def settling_depth_discrete(
     return c.to(torch.int64)
 
 
+def settling_depth_tail_strict(
+    D: torch.Tensor,
+    gamma: float = GAMMA_DEFAULT,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Strict tail settling depth.
+
+    c_tail_strict(t) is the first 1-based layer such that all raw distances
+    from that layer through the final layer are <= gamma. If no such suffix
+    exists, c = L + 1 and the corresponding unresolved flag is True.
+
+    Args:
+        D: tensor [L, T] of non-negative values.
+        gamma: threshold.
+
+    Returns:
+        (c [T] int64, unresolved [T] bool).
+    """
+    L, _ = _validate(D)
+    suffix_max = torch.flip(
+        torch.cummax(torch.flip(D, dims=(0,)), dim=0).values,
+        dims=(0,),
+    )
+    ok = suffix_max <= gamma
+    any_ok = ok.any(dim=0)
+    first_idx = ok.float().argmax(dim=0)
+    fallback = torch.full_like(first_idx, L + 1)
+    c = torch.where(any_ok, first_idx + 1, fallback)
+    return c.to(torch.int64), ~any_ok
+
+
+def settling_depth_tail_soft(
+    D: torch.Tensor,
+    gamma: float = GAMMA_DEFAULT,
+    rho: float = RHO_DEFAULT,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Soft tail settling depth.
+
+    c_tail_soft(t; rho) is the first 1-based layer where at least `rho`
+    fraction of the suffix layers have raw distance <= gamma. If no suffix
+    satisfies the occupancy rule, c = L + 1 and unresolved is True.
+
+    Args:
+        D: tensor [L, T] of non-negative values.
+        gamma: threshold.
+        rho: suffix occupancy threshold in [0, 1].
+
+    Returns:
+        (c [T] int64, unresolved [T] bool).
+    """
+    if not 0.0 <= rho <= 1.0:
+        raise ValueError(f"rho must be in [0, 1], got {rho}")
+    L, _ = _validate(D)
+    inside = (D <= gamma).to(torch.float32)
+    suffix_count = torch.flip(
+        torch.cumsum(torch.flip(inside, dims=(0,)), dim=0),
+        dims=(0,),
+    )
+    suffix_len = torch.arange(L, 0, -1, dtype=torch.float32, device=D.device)[:, None]
+    ok = (suffix_count / suffix_len) >= rho
+    any_ok = ok.any(dim=0)
+    first_idx = ok.float().argmax(dim=0)
+    fallback = torch.full_like(first_idx, L + 1)
+    c = torch.where(any_ok, first_idx + 1, fallback)
+    return c.to(torch.int64), ~any_ok
+
+
 def settling_depth_interp(
     D: torch.Tensor,
     gamma: float = GAMMA_DEFAULT,
