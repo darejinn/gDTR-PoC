@@ -170,7 +170,10 @@ Genomic foundation models --- causal LMs (Evo~2~\cite{nguyen2026evo2}, HyenaDNA~
 
 We introduce \gDTR{}, a layer-wise readout of residual-stream commitment depth. The Deep-Thinking Ratio of~\citet{chen2026deepthinking} measures, in NLP transformers, the layer at which intermediate logit-lens distributions~\cite{nostalgebraist2020logitlens,belrose2023tunedlens,pal2023futurelens} converge within $\varepsilon$ of the final layer. \gDTR{} adapts this idea to nucleotide sequences with three changes: a cosine residual-stream lens for small genomic vocabularies; a running-minimum envelope for non-monotone genomic-model trajectories; and an Evo~2-specific post-final-norm reference that handles representational saturation before the final block (\S\ref{sec:framework}). Fig.~\ref{fig:schematic} summarises the readout.
 
-This short paper makes three contributions. \textbf{(C1)} We define the per-token \emph{settling depth} $c(t)$ for genomic causal LMs, including the architectural handling required for Evo~2's pre-final saturation, and validate that a single chr22 calibration transfers to held-out chr17. \textbf{(C2)} We show that splice sites and enhancer-like cCREs settle earlier than surrounding genomic contexts, that the splice signal is not explained by next-token entropy, and that targeted motif/flank perturbations cleanly separate motif detection from grammar integration. \textbf{(C3)} We show that ClinVar molecular-consequence classes differ in the layer at which a variant most disrupts the residual trajectory, providing a depth probe rather than a clinical scorer. The unifying claim: biological grammar changes not only \emph{what} a genomic foundation model predicts, but also \emph{where} its representation settles.
+This short paper makes three contributions. \textbf{(C1)} We define the per-token \emph{settling depth} $c(t)$ for genomic causal LMs, including the architectural handling required for Evo~2's pre-final saturation, and validate that a single chr22 calibration transfers to held-out chr17. \textbf{(C2)} We show that splice sites and enhancer-like cCREs settle earlier than surrounding genomic contexts, that the splice signal is not explained by next-token entropy, and that targeted motif/flank perturbations cleanly separate motif detection from grammar integration. \textbf{(C3)} We show that ClinVar molecular-consequence classes differ in the layer at which a variant most disrupts the residual trajectory
+% REVIEW FIX (page-4: "ΔDcos deviates from abstract & intro"): tie |ΔDcos|
+% to the headline lens here so §3.3 does not introduce it cold.
+--- the same cosine lens read differentially --- providing a depth probe rather than a clinical scorer. The unifying claim: biological grammar changes not only \emph{what} a genomic foundation model predicts, but also \emph{where} its representation settles.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 2. FRAMEWORK
@@ -183,7 +186,11 @@ For a nucleotide sequence of length $T$ processed by a causal language model wit
   \Dcos(\ell, t) \;=\; 1 - \cos\!\bigl(\hl(t),\, \hnorm(t)\bigr),
   \label{eq:cos-lens}
 \end{equation}
-where $\hnorm(t)$ is the post-final-norm output of the model after the canonical interpretively distinct tap at $L^\star\!=\!29$ has been propagated through the final RMSNorm (blocks indexed $0,\ldots,L\!-\!1$ throughout the Evo~2 analysis). We define the \emph{settling depth} via a running-minimum envelope,
+where $\hnorm(t)$ is the post-final-norm output of the model after the canonical interpretively distinct tap at $L^\star\!=\!29$ has been propagated through the final RMSNorm (blocks indexed $0,\ldots,L\!-\!1$ throughout the Evo~2 analysis).
+% REVIEW FIX (blue note at Eq.1 "or cos, we can change"): justify cosine
+% over JSD via Evo-2's 1-mer vocabulary; last sentence reconciles with the
+% JSD AUROC in App. C so the two sections do not contradict.
+Evo~2 tokenises at single-nucleotide (1-mer) resolution, so its next-token mass concentrates on a $\sim\!4$-symbol alphabet and the parent DTR's logit-lens JSD collapses to a near-binary, low-resolution trace; the cosine distance in the $4096$-d residual stream descends smoothly enough to threshold into $c(t)$ and avoids the unembedding projection, unreliable through Evo~2's rotations and pre-final saturation (App.~\ref{app:architectural-quirk}). We retain JSD only as a cross-lens check for variant discrimination (App.~\ref{app:auroc-detail}), where aggregation over positions restores its signal. We define the \emph{settling depth} via a running-minimum envelope,
 \begin{equation}
   c(t) \;=\; \min\bigl\{\, \ell \;:\; \runmin\,\Dcos(\ell, t) \le \gamma_{\cos}\bigr\},
   \label{eq:settling}
@@ -193,6 +200,10 @@ where $\runmin\,\Dcos(\ell,t) = \min_{k\le\ell}\Dcos(k,t)$. Note that this is eq
 Lower $c(t)$ means earlier stabilisation; higher $c(t)$ means that the token remains unresolved until later layers. NLP transformers exhibit near-monotonic logit-lens convergence~\cite{nostalgebraist2020logitlens,belrose2023tunedlens}; genomic CLMs do not (Hyena alignment rotations, Evo~2 pre-final saturation), so the running-min collapses non-monotonicity into a monotone-non-increasing trace. The threshold $\gamma_{\cos}$ is set by \emph{regional $q_{70}$ calibration}: the 70th percentile of the running-min at the penultimate layer over the analysis region. The operating point sits inside a flat $5\!\times\!5$ grid sweep over $(\gamma_{\cos},\rho)$ (App.~\ref{app:gamma-sweep}).
 
 \paragraph{Settling depth is two-sided.} A lower $c(t)$ does not by itself imply a stronger biological signal. A token can settle early because (a) its representation is constrained by a biological grammar that the model commits to early, \emph{or} (b) its surrounding context is simpler, so the running-min envelope reaches $\gamma_{\cos}$ with little integration. We treat this two-sidedness as a feature of the metric rather than a flaw: the perturbation experiments in \S\ref{sec:motif-controls} are designed to push $c(t)$ in opposite directions, separately stressing motif detection and flanking-grammar integration. Throughout the paper we therefore interpret depth signatures as \emph{bidirectional} --- both directions of movement carry information about how the model integrates biological grammar, and we apply this lens consistently to every per-context comparison reported below.
+% REVIEW FIX (concern #1: Table A11 looks like an internal contradiction):
+% pre-frame the non-canonical-donor ordering as expected under arm (b) so
+% the headline bidirectional claim covers it; full reconciliation in App. D.2.
+As a concrete instance of arm (b), non-canonical splice donors settle \emph{earlier} than the dominant GT-AG class (App.~\ref{app:splice-canonical}), reflecting tighter flanking constraint rather than a stronger splice signal.
 
 \paragraph{Representational saturation before the final block.} Evo~2 reaches the post-norm direction before the last attention block executes: on chr22 sanity sequences, $\max_{t}|h_{30}(t)\!-\!h_{31}(t)|\!=\!0$ exactly (block~31 is a residual passthrough), while $\cos(h_{29},\hnorm)\!=\!-0.013$ versus $\cos(h_{30},\hnorm)\!=\!\cos(h_{31},\hnorm)\!=\!+0.6855$ --- block~30 rotates the representation into the post-norm direction, and block~29 is the deepest tap still interpretively distinct from $\hnorm$. The canonical ``tap the last block'' convention therefore breaks; we lock the canonical tap at $L^\star\!=\!29$ and use $\hnorm$ as the reference (full evidence in App.~\ref{app:architectural-quirk}). We treat $L^\star\!=\!29$ as an empirical observation about Evo~2 representational saturation, not a claim about the model's architectural design intent.
 
@@ -234,7 +245,10 @@ Settling depth is not simply a meter of motif intrinsic strength. We exploit its
 \subsection{Variant Disruptions Peak at Consequence-Specific Layers}
 \label{sec:variant-disruption}
 
-For variants, we use the layer at which $|\DDcos|$ peaks as a depth probe: it asks at which layer the residual trajectory changes most between reference and alternate sequence -- a depth signature, not a pathogenicity score. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort, class-stratified by ClinVar molecular-consequence (\textsc{mc}) priority, in decreasing order: canonical-splice, nonsense, frameshift, missense, synonymous, intron.
+% REVIEW FIX (page-4 + concern on ΔDcos): recast |ΔDcos| as the §2 cosine
+% lens read differentially (sensitivity vs. level crossing), and state why
+% the quantised c(t) cannot localise a single-nucleotide variant.
+For variants we read the \emph{same} cosine trajectory differentially: $\DDcos(\ell,t)\!=\!\Dcos^{\mathrm{alt}}(\ell,t)-\Dcos^{\mathrm{ref}}(\ell,t)$. Settling depth $c(t)$ is a quantised first-passage layer that a single substitution rarely shifts resolvably, so we instead take the layer where $|\DDcos|$ peaks --- the depth at which the variant most disrupts the trajectory. This is the lens of \S\ref{sec:framework} read as a sensitivity rather than a level crossing: a depth signature, not a pathogenicity score. We test this on a ClinVar~\cite{landrum2020clinvar} 15-cancer-gene cohort, class-stratified by ClinVar molecular-consequence (\textsc{mc}) priority, in decreasing order: canonical-splice, nonsense, frameshift, missense, synonymous, intron.
 
 Argmax-layer class medians read \emph{intron $<$ frameshift $<$ nonsense $<$ missense $\approx$ canonical splice $<$ synonymous} (Fig.~\ref{fig:variants}), and the six classes differ globally at Kruskal--Wallis $p\!=\!3.0\!\times\!10^{-10}$~\cite{kruskal1952wallis}. The only adjacent gap individually resolved by Bonferroni-corrected Dunn tests~\cite{dunn1964multiple} is nonsense $\to$ missense ($p_{\mathrm{adj}}\!<\!10^{-3}$); the other adjacent contrasts are consistent with the global test but not individually resolved at this sample size ($n\!=\!32$--$1{,}740$). The interpretable result is a population-level depth shift from early-truncating consequences (intron, frameshift, nonsense) toward missense and splice disruptions, and onward to synonymous substitutions, which peak at the deepest layers --- consistent with protein-semantic information consolidating in late layers, where coding-frame--dependent disruptions register earlier and identity-preserving substitutions register only after codon-level meaning has been integrated.
 
@@ -836,7 +850,17 @@ shallower recognition'' prior. The Cohen's $d$ between canonical GT-AG
 and non-canonical donors is small ($\approx 0.05$), consistent with the
 constrained branch-point and polypyrimidine context that flanks
 non-canonical introns~\cite{wang2008splicecode,burge1998u12}; we
-report the magnitudes honestly rather than over-interpret. The finding
+report the magnitudes honestly rather than over-interpret.
+% REVIEW FIX (concern #1, Table A11): turn the non-monotone ordering into
+% evidence FOR the two-sided metric (arm (b), U12 tighter flank) rather than
+% a contradiction; concedes "not monotone in signal strength" on our terms.
+This ordering
+is what the two-sided metric of \S\ref{sec:framework} predicts rather than
+a contradiction of it: non-canonical donors (e.g.\ U12-type AT-AC introns)
+sit in a tighter, more constrained flank, so the model commits early
+through context simplification (arm (b)) rather than through a stronger
+splice signal. Settling depth therefore tracks contextual determinacy,
+not biological signal strength in any monotone sense. The finding
 replicates qualitatively on the 8-layer HyenaDNA-large at depth-normalised
 scale.
 
